@@ -1,0 +1,150 @@
+# Project Overview
+Develop a SwiftUI iOS application that identifies plant species from user-provided photos. The app utilizes a combination of local Core ML models and external APIs (PlantNet and GPT-4o) to determine plant species, presenting the results in an interactive, haptic-rich card interface.
+
+# Technologies and Frameworks
+- SwiftUI for UI development.
+- Core ML for on-device machine learning.
+- Combine for reactive programming.
+- AVFoundation and PhotosUI for image capture and selection.
+- Core Data with NSPersistentCloudKitContainer for data persistence.
+- Firebase Crashlytics for crash reporting.
+- Lottie for animations.
+- UINotificationFeedbackGenerator for haptic feedback.
+
+# Coding Standards
+- Adhere to Swift 5.10 conventions.
+- Use camelCase for variable and function names; PascalCase for type names.
+- Prefer structs over classes unless reference semantics are required.
+- Utilize SwiftUI's declarative syntax for UI components.
+- Implement Combine publishers for asynchronous data handling.
+
+# UI/UX Guidelines
+- Design a minimalist and intuitive interface inspired by ChatGPT and Granola AI notes UI.
+- Implement a card stack UI where the top card displays the plant image and the bottom card shows identification results and care information.
+- Use pastel color palettes with clean white backgrounds; accent colors should correspond to plant categories.
+- Incorporate subtle animations and haptic feedback to enhance user interaction.
+
+# Image Processing Workflow
+1. Allow users to capture a new photo or select one from the photo library.
+2. Process the image through:
+   a. A local Core ML model trained on Flora Incognita data.
+   b. PlantNet REST API.
+   c. GPT-4o Vision API.
+3. Aggregate the results using a majority vote mechanism, breaking ties by average confidence scores.
+
+# Data Handling
+- Fetch plant care information from Wikipedia REST API and USDA PLANTS JSON feeds.
+- Normalize and cache this data using Core Data for offline access.
+- Ensure all network requests are performed asynchronously with proper error handling.
+
+# Accessibility
+- Ensure all UI elements are accessible with VoiceOver.
+- Provide descriptive labels for images and interactive elements.
+- Support Dynamic Type for text scaling.
+
+# Performance Optimization
+- Optimize image processing to minimize latency.
+- Cache API responses to reduce redundant network calls.
+- Profile the app using Xcode Instruments to identify and address performance bottlenecks.
+
+# Testing and Deployment
+- Write unit tests for all critical components.
+- Use TestFlight for beta distribution.
+- Monitor app performance and crashes using Firebase Crashlytics.
+
+# Cursor AI Behavior
+- Prioritize code clarity and maintainability.
+- When generating code, include comments explaining the purpose and functionality.
+- Before making significant changes, outline a brief plan or rationale.
+- Continuously update this `.cursorrules` file with new insights and decisions as the project evolves.
+
+{
+  "project": "PlantIdentifierApp",
+  "description": "An iOS application for identifying plant species and providing care information using on-device and remote machine learning models.",
+  "rules": [
+    {
+      "id": "rule-001",
+      "description": "Ensure all image inputs are processed through the defined classification pipeline.",
+      "trigger": "imageInput",
+      "action": "processThroughPipeline"
+    },
+    {
+      "id": "rule-002",
+      "description": "Cache fetched plant metadata locally to support offline access.",
+      "trigger": "metadataFetch",
+      "action": "cacheLocally"
+    },
+    {
+      "id": "rule-003",
+      "description": "Provide haptic feedback based on identification confidence levels.",
+      "trigger": "identificationResult",
+      "action": "triggerHapticFeedback"
+    },
+    {
+      "id": "rule-004",
+      "description": "Update this .cursorrules file with new rules as the project evolves.",
+      "trigger": "projectEvolution",
+      "action": "updateRulesFile"
+    },
+    {
+      "id": "rule-005",
+      "description": "Display first-run permissions overlay when camera or photo library access has not been granted.",
+      "trigger": "permissionCheck",
+      "action": "showPermissionsOverlay"
+    },
+    {
+      "id": "rule-006",
+      "description": "Keep external API keys out of source. Load from Secrets.xcconfig or environment; never commit keys.",
+      "trigger": "apiKeyUsage",
+      "action": "useXCConfigKeys"
+    },
+    {
+      "id": "rule-007",
+      "description": "Always downscale images to max 600px before network upload to reduce latency and bandwidth.",
+      "trigger": "beforeUploadImage",
+      "action": "resizeImage"
+    },
+    {
+      "id": "rule-008",
+      "description": "Prefer local model result; skip remote classifiers when local confidence ≥ 0.75 to save time/cost.",
+      "trigger": "classificationPipeline",
+      "action": "localFirstShortCircuit"
+    },
+    {
+      "id": "rule-009",
+      "description": "Use the shared URLSession (8s request timeout) for all outbound HTTP calls to reuse connections.",
+      "trigger": "networkRequest",
+      "action": "useSharedSession"
+    },
+    {
+      "id": "rule-010",
+      "description": "Present info in InfoCardView with segmented tabs (Quick Facts/Care/More); ensure bullet facts are friendly and accessible.",
+      "trigger": "infoPresentation",
+      "action": "useInfoCardTabs"
+    },
+    {
+      "id": "rule-011",
+      "description": "Use system `.sheet` with detents for bottom info card; avoid custom offset maths.",
+      "trigger": "bottomSheet",
+      "action": "preferSystemSheet"
+    },
+    {
+      "id": "rule-012",
+      "description": "Use bottom toolbar with icon-only buttons for capture actions to keep UI clean.",
+      "trigger": "captureControls",
+      "action": "bottomBarIcons"
+    },
+    {
+      "id": "rule-013",
+      "description": "Aggregate species details via Trefle + Wikipedia + GPT, fallback to GPT completion when >30% fields missing.",
+      "trigger": "speciesDetails",
+      "action": "aggregateWithFallback"
+    },
+    {
+      "id": "rule-014",
+      "description": "Use TabView with doc.text / leaf / chart.bar icons for Overview, Care, Growth tabs in InfoCard.",
+      "trigger": "infoTabs",
+      "action": "useIconTabs"
+    }
+  ]
+}

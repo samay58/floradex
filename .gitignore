@@ -1,0 +1,21 @@
+# Xcode
+build/
+DerivedData/
+*.xcodeproj/*swiftdoc
+*.xcodeproj/*swiftmodule
+*.xcodeproj/project.xcworkspace/
+*.xcodeproj/xcuserdata/
+*.xcuserdatad/
+
+# Swift Package Manager
+.build/
+.swiftpm/
+Package.resolved
+Package.pins
+
+# Secrets
+Secrets.xcconfig
+plantlife/Shared/Secrets.swift
+
+# macOS
+.DS_Store 
