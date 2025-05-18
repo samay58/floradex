@@ -50,16 +50,22 @@ struct GlassBar: ViewModifier {
             .padding(.vertical, style.verticalPadding)
             .background {
                 if let tint = tint {
-                    style.material
-                        .opacity(0.7)
-                        .background(tint.opacity(0.1))
+                    ZStack {
+                        Rectangle()
+                            .fill(style.material)
+                            .opacity(0.7)
+                        Rectangle()
+                            .fill(tint)
+                            .opacity(0.1)
+                    }
                 } else {
-                    style.material
+                    Rectangle()
+                        .fill(style.material)
                         .opacity(0.7)
                 }
             }
             .clipShape(RoundedRectangle(cornerRadius: style.cornerRadius))
-            .shadow(color: .black.opacity(style.shadowOpacity), radius: 5, x: 0, y: style.style == .top ? 2 : -2)
+            .shadow(color: .black.opacity(style.shadowOpacity), radius: 5, x: 0, y: style == .top ? 2 : -2)
     }
 }
 

@@ -82,16 +82,16 @@ final class SpeciesDetails: Identifiable, Codable {
         let lastUpdated = try container.decodeIfPresent(Date.self, forKey: .lastUpdated) ?? Date()
 
         self.init(latinName: latinName,
-                  commonName: commonName,
-                  summary: summary,
-                  growthHabit: growthHabit,
-                  sunlight: sunlight,
-                  water: water,
-                  soil: soil,
-                  temperature: temperature,
-                  bloomTime: bloomTime,
-                  funFacts: funFacts,
-                  lastUpdated: lastUpdated)
+                       commonName: commonName,
+                       summary: summary,
+                       growthHabit: growthHabit,
+                       sunlight: sunlight,
+                       water: water,
+                       soil: soil,
+                       temperature: temperature,
+                       bloomTime: bloomTime,
+                       funFacts: funFacts,
+                       lastUpdated: lastUpdated)
     }
 
     // Encodable

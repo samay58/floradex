@@ -4,10 +4,28 @@
 <dict>
 	<key>SchemeUserState</key>
 	<dict>
-		<key>plantlife.xcscheme_^#shared#^_</key>
+		<key>floradex.xcscheme_^#shared#^_</key>
 		<dict>
 			<key>orderHint</key>
 			<integer>0</integer>
+		</dict>
+	</dict>
+	<key>SuppressBuildableAutocreation</key>
+	<dict>
+		<key>46F3108A2DD526E7003C8B8D</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>46F310992DD526E8003C8B8D</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>46F310A32DD526E8003C8B8D</key>
+		<dict>
+			<key>primary</key>
+			<true/>
 		</dict>
 	</dict>
 </dict>

@@ -4,6 +4,177 @@
 
 ---
 
+## Floradex Evolution — Implementation Plan (Current / High Priority)
+
+**Goal:** Transform PlantLife into Floradex with a retro collection/tracking UI while maintaining core plant identification functionality.
+
+### Phase 1: Foundation (Week 1)
+
+- [x] **Branch & Project Setup**
+  - [x] Create `feat/floradex-foundation` branch from main
+  - [x] Rename scheme from "PlantLife" to "Floradex" (preserve bundle ID)
+  - [x] Update app icons and launch screen with Floradex-style assets
+  - [x] Create `Theme.swift` containing color tokens, corner radius, and animation presets
+
+- [x] **Font Integration** 
+  - [x] Add "Press Start 2P" Google Font for headlines/numbers (SIL OFL license)
+    - [x] Download .ttf file and add to Xcode project
+    - [x] Add entry to Info.plist under "Fonts provided by application"
+  - [ ] Add "M PLUS 1 Code" Google Font for Japanese katakana overlay effects (optional)
+  - [x] Create Font extension with static accessors for app typography
+
+- [x] **Persistence Layer: DexEntry Model**
+  - [x] Create `Models/DexEntry.swift` with the following structure:
+    ```swift
+    @Model
+    final class DexEntry {
+        @Attribute(.unique) var id: Int              // running "Floradex number"
+        var createdAt: Date = .now                   // for sort options
+        var latinName: String                        // FK into SpeciesDetails
+        var snapshot: Data?                          // original jpeg (≤1 MB)
+        var sprite: Data?                            // 64×64 png – generated
+        var tags: [String] = []                      // user editable
+        var notes: String?                           // optional user memo
+        var spriteGenerationFailed: Bool = false     // prevent retry loops
+    }
+    ```
+  - [x] Implement SwiftData migrations for existing app data
+  - [x] Create unit tests for DexEntry model
+  - [x] Ensure `DexEntry` is added to `ModelContainer` schema
+
+- [x] **DexRepository Implementation**
+  - [x] Create `DataHandling/DexRepository.swift` with core CRUD operations
+    ```swift
+    actor DexRepository {
+        func addEntry(latin: String, snapshot: UIImage, tags: [String]) async throws -> DexEntry
+        func all(sort: DexSort = .numberAsc) -> [DexEntry]
+        func update(_ entry: DexEntry, tags: [String], notes: String?)
+        func delete(_ entry: DexEntry)
+        enum DexSort { case numberAsc, newest, alpha, tag(String) }
+    }
+    ```
+  - [x] Implement ID auto-increment logic (fetch max(id) + 1)
+  - [x] Add test cases for sorting and filtering options
+
+### Phase 2: Sprite Generation Service (Week 1-2)
+
+- [x] **SpriteService Implementation**
+  - [x] Create `Networking/SpriteService.swift` with OpenAI Image API integration:
+    ```swift
+    enum SpriteEndpoint: APIEndpoint {
+        case generate(prompt: String, apiKey: String)
+        
+        var baseURL: URL { URL(string: "https://api.openai.com")! }
+        var path: String { "/v1/images/generations" }
+        var method: HTTPMethod { .post }
+        var headers: [String: String]? {
+            switch self {
+            case .generate(_, let key): return ["Authorization": "Bearer \(key)"]
+            }
+        }
+        var parameters: [String: Any]? {
+            switch self {
+            case .generate(let prompt, _):
+                return ["model": "gpt-image-1",
+                        "prompt": prompt,
+                        "n": 1,
+                        "size": "256x256",
+                        "style": "pixel-art"]
+            }
+        }
+    }
+    ```
+  - [x] Implement `spriteURL(for latin: String)` function to generate prompts (achieved via `generateSprite` returning `Data`)
+  - [x] Add image downloading with URLSession.shared.data(from:)
+  - [x_] Implement image downsizing to 64x64px for sprites (API provides 256x256, then resized)
+  - [x] Wire into ClassificationViewModel after successful identification
+  - [x] Add retry logic and error handling (basic error handling in place; `APIClient` may have retries)
+  - [ ] Create usage tracking system to implement rate limiting *(Pending)*
+  - [ ] Implement SHA-1 based caching for `latinName+style` to avoid duplicate API calls for *new* entries of same species *(Pending, if desired)*
+
+### Phase 3: Core UI Components (Week 2-3)
+
+- [x] **Design System**
+  - [ ] Create `DesignTokens.xcassets` with color sets: *(User task: Manual asset creation)*
+    - DexBackground: #E7E4D8 (beige)
+    - DexCardSurface
+    - DexCardSurfaceDark
+    - DexShadow
+    - Type-based accent colors
+  - [x] Implement `Theme.swift` with global styling constants *(Initial Floradex elements added)*
+  - [x] Create `PreviewHelper.swift` with sample data for SwiftUI Previews (`plantlife/Shared/PreviewHelper.swift` created)
+
+- [x] **DexCard Component**
+  - [x] Create `UI/Components/DexCard.swift` component
+  - [x] Implement snapshot + overlay with latinName, ID, and stats *(Basic structure with placeholders)*
+  - [x] Add sprite watermark with Japanese text effect *(Japanese text overlay and sprite display implemented)*
+  - [ ] Create hover effects and interaction states *(Pending)*
+  - [x] Implement accessibility labels for VoiceOver *(Basic accessibility from standard components; needs review)*
+
+- [x] **DexGrid Component**
+  - [x] Create `UI/Components/DexGrid.swift` with masonry/2-column layout *(LazyVGrid 2-column implemented)*
+  - [x] Implement MatchedGeometryEffect for smooth transitions *(Basic hero transition implemented)*
+  - [x] Add pull-to-refresh and empty state handling
+  - [ ] Implement filtering capability based on tags *(Pending, part of Tag Filter System in Phase 4)*
+
+### Phase 4: Screen Implementations (Week 3-4)
+
+- [x] **Tag Filter System**
+  - [x] Create `UI/Components/TagChip.swift` for tag visualization
+  - [x] Implement horizontal tag scroller at top of grid (`UI/Components/TagFilterView.swift` created)
+  - [x] Create tag selection/filtering logic *(Initial logic in `FloradexHomeScreen.swift`)*
+  - [ ] Add tag management UI (add/remove) *(Pending)*
+  - [x] Integrate TagFilterView and DexGrid into `Views/FloradexHomeScreen.swift`
+
+- [ ] **Details Screen Redesign (`DexDetailView.swift`)**
+  - [x] Create `DexDetailView.swift` as a replacement for `InfoCardView`, using `TabView` for sections. *(Initial structure with Overview, Care, Growth tabs implemented)*
+  - [x] Fetch `SpeciesDetails` dynamically based on `DexEntry.latinName`. *(Implemented via @Query in init)*
+  - [x] Tab navigation uses "Overview", "Care", "Growth" sections. *(Note: Plan mentioned "About/Care/Evolutions"; "Evolutions" is a future consideration if desired)*
+  - [x] Flesh out tab content for `OverviewTabView`, `CareTabView`, `GrowthTabView`. *(Content for summary, facts, notes, care info, growth info, and learn more link added; placeholder data for gauge implemented).* 
+  - [ ] ~~Replace segment bar with SegmentedControl pills (white text, alpha background)~~ *(Superseded by TabView with Label icons/text)*
+  - [ ] Implement stats display (e.g., using `Gauge`): *(Started - Placeholder Gauge for 'Care Difficulty' added with mock data derivation)*
+    - [ ] Define and map actual `SpeciesDetails` data (e.g. care level, growth rate) to numerical/categorical values for gauges. *(Pending definition of new SpeciesDetails fields or complex heuristics)*
+    - [ ] Implement utility to extract dominant color from sprite for tinting gauges. *(Pending)*
+  - [ ] Adapt existing species data visualization to new design *(Ongoing - InfoRow used, tab content generally adapted, further refinements may be needed)*
+  - [ ] Ensure dark/light mode adaptivity *(Pending review and specific adjustments)*
+
+- [ ] **Main Capture Flow Integration**
+  - [ ] Modify current capture flow to create DexEntry after identification
+  - [ ] Trigger sprite generation after species identification
+  - [ ] Update navigation flow to show collection after capture
+  - [ ] Add success animation and haptic feedback
+
+### Phase 5: Polish & Optimization (Week 4)
+
+- [ ] **Performance Optimization**
+  - [ ] Profile and optimize image processing pipeline
+  - [ ] Implement progressive loading for sprite generation
+  - [ ] Add caching for frequently accessed data
+  - [ ] Optimize list rendering with lazy loading
+
+- [ ] **Camera Bug Fixes**
+  - [ ] Fix black-screen capture bug:
+    - [ ] Add `preview.frame = view.bounds` in `viewDidLayoutSubviews`
+    - [ ] Check authorization status before starting session
+    - [ ] Set `output.isHighResolutionCaptureEnabled = true` after adding output
+  - [ ] Eliminate light-mode grey halo:
+    - [ ] Use `.custom` button type instead of `.system`
+    - [ ] Set explicit background colors or use `.buttonStyle(.plain)`
+
+- [ ] **Usage Analytics & Limits**
+  - [ ] Track sprite generation usage in UserDefaults
+  - [ ] Implement weekly limits with subscription prompts
+  - [ ] Add analytics events for key user actions
+  - [ ] Create telemetry for performance monitoring
+
+- [ ] **Final Testing & Documentation**
+  - [ ] Create UI tests for core user flows
+  - [ ] Document architecture and implementation details
+  - [ ] Create sample data for demo purposes
+  - [ ] Prepare release notes and marketing materials
+
+---
+
 ## Hotfix — Data Completeness (May-15)
 
 **Goal:** eliminate empty info cards by enriching SpeciesDetails via GPT and improving tab discoverability.

@@ -64,8 +64,7 @@ struct InfoCardView: View {
                 }
             }
             .frame(maxWidth: .infinity,
-                   minHeight: 180,
-                   maxHeight: 300)
+                   minHeight: 180)
             .onChange(of: selectedTab) { _ in
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
             }

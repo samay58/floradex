@@ -11,18 +11,24 @@ final class ClassificationViewModel: ObservableObject {
     @Published var confidence: Double? = nil
     @Published var isLoading = false
     @Published var details: SpeciesDetails? = nil
+    @Published var currentDexEntry: DexEntry? = nil // To observe the new entry
 
     let imageService: ImageSelectionService
     private let classifier = ClassifierService.shared
     private let speciesRepository: SpeciesRepository
+    private let dexRepository: DexRepository // Added DexRepository
+    private let spriteService = SpriteService.shared // Added SpriteService
     private let apiClient = APIClient.shared // Added for potential general use, though services might be called directly
     private var subscriptions = Set<AnyCancellable>()
     private var classificationTask: Task<Void, Never>?
 
     // Updated initializer
-    init(imageService: ImageSelectionService = .shared, speciesRepository: SpeciesRepository) {
+    init(imageService: ImageSelectionService = .shared, 
+         speciesRepository: SpeciesRepository, 
+         dexRepository: DexRepository) { // Added dexRepository
         self.imageService = imageService
-        self.speciesRepository = speciesRepository // Added
+        self.speciesRepository = speciesRepository
+        self.dexRepository = dexRepository // Initialize dexRepository
         bind()
     }
 
@@ -43,8 +49,15 @@ final class ClassificationViewModel: ObservableObject {
         self.species = nil
         self.confidence = nil
         self.details = nil
+        self.currentDexEntry = nil // Reset current dex entry
 
-        let thumbnail = image.resized(maxSide: 600)
+        guard let thumbnail = UIImage.ImageProcessing.resized(image, maxSide: 600) else {
+            print("Failed to resize image for classification")
+            isLoading = false
+            return
+        }
+        
+        let fullSnapshotImage = image // Keep original for DexEntry snapshot
         var results: [ClassifierResult] = []
         var finalWinner: ClassifierResult?
 
@@ -92,6 +105,52 @@ final class ClassificationViewModel: ObservableObject {
                 // Fetch details using the new method
                 self.details = await fetchAndCacheSpeciesDetails(latinName: speciesName)
                 print("Loaded details for \(speciesName):", self.details ?? "nil")
+
+                // Create DexEntry after identification and fetching details
+                if let fetchedDetails = self.details {
+                    do {
+                        let newEntry = try await dexRepository.addEntry(
+                            latinName: fetchedDetails.latinName,
+                            snapshot: fullSnapshotImage, // Use original image for snapshot
+                            tags: [] // Initial tags, can be updated later
+                        )
+                        self.currentDexEntry = newEntry
+                        print("Created DexEntry with ID: \(newEntry.id) for \(fetchedDetails.latinName)")
+                        
+                        // Asynchronously generate and save sprite
+                        Task.detached(priority: .background) {
+                            print("Starting sprite generation for \(fetchedDetails.latinName)...")
+                            do {
+                                let spriteData = try await self.spriteService.generateSprite(
+                                    forCommonName: fetchedDetails.commonName ?? fetchedDetails.latinName, 
+                                    latinName: fetchedDetails.latinName
+                                )
+                                // Update DexEntry with sprite data using the new repository method
+                                try await self.dexRepository.updateSprite(for: newEntry.id, spriteData: spriteData)
+                                print("Successfully generated and saved sprite for DexEntry ID: \(newEntry.id)")
+                                await MainActor.run {
+                                    self.currentDexEntry?.sprite = spriteData
+                                    self.currentDexEntry?.spriteGenerationFailed = false
+                                }
+                            } catch {
+                                print("Sprite generation failed for \(fetchedDetails.latinName): \(error)")
+                                // Mark sprite generation as failed in DexEntry using the new repository method
+                                do {
+                                    try await self.dexRepository.markSpriteGenerationFailed(for: newEntry.id)
+                                    print("Marked sprite generation failed for DexEntry ID: \(newEntry.id)")
+                                    await MainActor.run {
+                                        self.currentDexEntry?.spriteGenerationFailed = true
+                                    }
+                                } catch {
+                                    print("Failed to mark sprite generation failed for DexEntry ID: \(newEntry.id): \(error)")
+                                }
+                            }
+                        }
+                    } catch {
+                        print("Failed to create DexEntry: \(error)")
+                    }
+                }
+
             } else {
                 // Handle case where no definitive species was identified
                 self.species = finalWinner?.species ?? "Identification unclear"
@@ -100,7 +159,7 @@ final class ClassificationViewModel: ObservableObject {
                 if finalWinner != nil { // Trigger haptic for low confidence if there was some result
                     triggerHaptic(for: self.confidence ?? 0.0)
                 }
-                 print("No valid species winner, or winner was 'unknown'. Not fetching details.")
+                 print("No valid species winner, or winner was 'unknown'. Not fetching details or creating DexEntry.")
             }
 
         } catch {

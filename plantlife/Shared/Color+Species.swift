@@ -2,7 +2,7 @@ import SwiftUI
 
 extension Color {
     static func accent(for species: String?) -> Color {
-        guard let species, !species.isEmpty else { return .accentColor }
+        guard let species, !species.isEmpty else { return Theme.Colors.primary }
         let hash = abs(species.hashValue)
         let hue = Double(hash % 256) / 255.0
         // low saturation, high brightness pastel

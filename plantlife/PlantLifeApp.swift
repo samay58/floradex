@@ -6,12 +6,14 @@ struct PlantLifeApp: App {
     // State properties for ModelContainer and SpeciesRepository
     let modelContainer: ModelContainer
     let speciesRepository: SpeciesRepository
+    let dexRepository: DexRepository
 
     init() {
         do {
             // Define the schema including all SwiftData @Model classes
             let schema = Schema([
-                SpeciesDetails.self
+                SpeciesDetails.self,
+                DexEntry.self
                 // Add any other @Model classes here in the future
             ])
 
@@ -24,8 +26,9 @@ struct PlantLifeApp: App {
 
             // Initialize the SpeciesRepository with the main context from the container
             speciesRepository = SpeciesRepository(modelContext: modelContainer.mainContext)
+            dexRepository = DexRepository(modelContext: modelContainer.mainContext)
             
-            print("SwiftData ModelContainer and SpeciesRepository initialized successfully.")
+            print("SwiftData ModelContainer, SpeciesRepository, and DexRepository initialized successfully.")
 
         } catch {
             // If the container fails to initialize, it's a critical error.
@@ -36,9 +39,20 @@ struct PlantLifeApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView(viewModel: ClassificationViewModel(speciesRepository: self.speciesRepository))
-                .environmentObject(ImageSelectionService.shared)
+            let imageService = ImageSelectionService.shared
+            TabView {
+                FloradexHomeScreen()
+                    .tabItem {
+                        Label("Floradex", systemImage: "leaf.fill")
+                    }
+
+                ContentView(viewModel: ClassificationViewModel(speciesRepository: self.speciesRepository, dexRepository: self.dexRepository))
+                    .tabItem {
+                        Label("Identify", systemImage: "camera.fill")
+                    }
+            }
+            .environmentObject(imageService)
         }
-        .modelContainer(modelContainer) // Make the ModelContainer available to the scene
+        .modelContainer(modelContainer)
     }
 } 

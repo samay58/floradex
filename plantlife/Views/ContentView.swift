@@ -146,30 +146,29 @@ struct ContentView: View {
                     .padding()
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
-                
-                // Bottom toolbar
-                GlassToolbar(style: .bottom) {
-                    HStack(spacing: 32) {
-                        Button {
-                            withAnimation(Theme.Animations.snappy) {
-                                showingCamera = true
-                            }
-                        } label: {
-                            Image(systemName: "camera.fill")
-                        }
-                        .circularButton(size: 60)
-                    }
-                    .padding(.vertical, 6)
-                }
             }
-        }
-        .fullScreenCover(isPresented: $showingCamera) {
-            if permissions.isFullyAuthorized {
-                CameraCaptureView()
-                    .environmentObject(ImageSelectionService.shared)
-            } else {
-                PermissionsOverlayView()
-                    .environmentObject(permissions)
+            .overlay(
+                Button {
+                    withAnimation(Theme.Animations.snappy) {
+                        showingCamera = true
+                    }
+                } label: {
+                    Image(systemName: "camera.fill")
+                        .font(.system(size: 28, weight: .medium))
+                }
+                .circularButton(size: 70, backgroundColor: Theme.Colors.primary, foregroundColor: .white, hasBorder: false)
+                .padding(.trailing, 24)
+                .padding(.bottom, 40),
+                alignment: .bottomTrailing
+            )
+            .fullScreenCover(isPresented: $showingCamera) {
+                if permissions.isFullyAuthorized {
+                    CameraCaptureView()
+                        .environmentObject(ImageSelectionService.shared)
+                } else {
+                    PermissionsOverlayView()
+                        .environmentObject(permissions)
+                }
             }
         }
         .sheet(isPresented: $showingInfoSheet) {
@@ -196,25 +195,31 @@ struct ContentView: View {
 
 #Preview("No Image Selected") {
     let config = ModelConfiguration(isStoredInMemoryOnly: true)
-    let container = try! ModelContainer(for: SpeciesDetails.self, configurations: config)
-    let repo = SpeciesRepository(modelContext: container.mainContext)
+    let container = try! ModelContainer(for: SpeciesDetails.self, DexEntry.self, configurations: config)
+    let speciesRepo = SpeciesRepository(modelContext: container.mainContext)
+    let dexRepo = DexRepository(modelContext: container.mainContext)
     let imageService = ImageSelectionService.shared
     imageService.selectedImage = nil // Ensure no image is selected
 
-    return ContentView(viewModel: ClassificationViewModel(speciesRepository: repo))
+    return NavigationStack {
+        ContentView(viewModel: ClassificationViewModel(speciesRepository: speciesRepo, dexRepository: dexRepo))
         .environmentObject(imageService)
         .modelContainer(container)
+    }
 }
 
 #Preview("Image Selected") {
     let config = ModelConfiguration(isStoredInMemoryOnly: true)
-    let container = try! ModelContainer(for: SpeciesDetails.self, configurations: config)
-    let repo = SpeciesRepository(modelContext: container.mainContext)
+    let container = try! ModelContainer(for: SpeciesDetails.self, DexEntry.self, configurations: config)
+    let speciesRepo = SpeciesRepository(modelContext: container.mainContext)
+    let dexRepo = DexRepository(modelContext: container.mainContext)
     let imageService = ImageSelectionService.shared
     // Use the same helper we created for InfoSheetView previews for a consistent placeholder
     imageService.selectedImage = PreviewHelpers.previewImage 
 
-    return ContentView(viewModel: ClassificationViewModel(speciesRepository: repo))
+    return NavigationStack {
+        ContentView(viewModel: ClassificationViewModel(speciesRepository: speciesRepo, dexRepository: dexRepo))
         .environmentObject(imageService)
         .modelContainer(container)
+    }
 } 

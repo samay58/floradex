@@ -29,9 +29,22 @@
 		46F310A42DD526E8003C8B8D /* plantlifeUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = plantlifeUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		4683B7072DD87DCC005FC8BC /* Exceptions for "plantlife" folder in "plantlife" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 46F3108A2DD526E7003C8B8D /* plantlife */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		46F3108D2DD526E7003C8B8D /* plantlife */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				4683B7072DD87DCC005FC8BC /* Exceptions for "plantlife" folder in "plantlife" target */,
+			);
 			path = plantlife;
 			sourceTree = "<group>";
 		};
@@ -404,6 +417,7 @@
 				DEVELOPMENT_TEAM = ZL5U59XBJ6;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = plantlife/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Need the camera to snap a plant photo.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Need your photo to identify the plant.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -437,6 +451,7 @@
 				DEVELOPMENT_TEAM = ZL5U59XBJ6;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = plantlife/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Need the camera to snap a plant photo.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Need your photo to identify the plant.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

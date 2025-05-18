@@ -121,17 +121,19 @@ struct PreviewHelpers {
     }
 
     @MainActor
-    static func inMemoryRepository() -> SpeciesRepository {
+    static func inMemoryRepository() -> (SpeciesRepository, DexRepository) {
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        let container = try! ModelContainer(for: SpeciesDetails.self, configurations: config)
-        // Optionally pre-populate with mock data:
-        // container.mainContext.insert(SpeciesDetails.mockMonstera)
-        return SpeciesRepository(modelContext: container.mainContext)
+        let container = try! ModelContainer(for: SpeciesDetails.self, DexEntry.self, configurations: config)
+        return (
+            SpeciesRepository(modelContext: container.mainContext),
+            DexRepository(modelContext: container.mainContext)
+        )
     }
 
     @MainActor
     static var mockLoadingVM: ClassificationViewModel {
-        let vm = ClassificationViewModel(speciesRepository: inMemoryRepository())
+        let (speciesRepo, dexRepo) = inMemoryRepository()
+        let vm = ClassificationViewModel(speciesRepository: speciesRepo, dexRepository: dexRepo)
         vm.isLoading = true
         vm.species = "Identifying..."
         return vm
@@ -139,30 +141,33 @@ struct PreviewHelpers {
 
     @MainActor
     static var mockLoadedVM: ClassificationViewModel {
-        let vm = ClassificationViewModel(speciesRepository: inMemoryRepository())
+        let (speciesRepo, dexRepo) = inMemoryRepository()
+        let vm = ClassificationViewModel(speciesRepository: speciesRepo, dexRepository: dexRepo)
         vm.species = "Monstera deliciosa"
         vm.confidence = 0.92
-        vm.details = .mockMonstera
+        vm.details = SpeciesDetails.mockMonstera
         vm.isLoading = false
         return vm
     }
     
     @MainActor
     static var mockPartialDataVM: ClassificationViewModel {
-        let vm = ClassificationViewModel(speciesRepository: inMemoryRepository())
+        let (speciesRepo, dexRepo) = inMemoryRepository()
+        let vm = ClassificationViewModel(speciesRepository: speciesRepo, dexRepository: dexRepo)
         vm.species = "Planta incompleta"
         vm.confidence = 0.65
-        vm.details = .mockPartiallyPopulated
+        vm.details = SpeciesDetails.mockPartiallyPopulated
         vm.isLoading = false
         return vm
     }
     
     @MainActor
     static var mockNoDetailsVM: ClassificationViewModel {
-        let vm = ClassificationViewModel(speciesRepository: inMemoryRepository())
+        let (speciesRepo, dexRepo) = inMemoryRepository()
+        let vm = ClassificationViewModel(speciesRepository: speciesRepo, dexRepository: dexRepo)
         vm.species = "Species Ignotus"
         vm.confidence = 0.40
-        vm.details = .mockEmpty // Or nil if that's a state to test
+        vm.details = SpeciesDetails.mockEmpty
         vm.isLoading = false
         return vm
     }

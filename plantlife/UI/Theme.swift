@@ -5,9 +5,9 @@ struct Theme {
     // MARK: - Colors
     struct Colors {
         // Base Colors
-        static let primary = Color("AccentColor")
-        static let secondary = Color.secondary
-        static let background = Color(.systemBackground)
+        static let primary = Color.primary        // Label color adapts light/dark
+        static let secondary = Color.secondary    // Secondary label
+        static let background = Color(.systemBackground) // Main surface
         static let surface = Color(.secondarySystemBackground)
         
         // Plant Type Colors
@@ -18,6 +18,12 @@ struct Theme {
         static let shrub = Color.orange
         static let vine = Color.indigo
         static let grass = Color.lime
+        
+        // Floradex Specific Colors
+        static let dexBackground = Color(.systemGroupedBackground)
+        static let dexCardSurface = Color(.secondarySystemBackground)
+        static let dexCardSurfaceDark = Color(.tertiarySystemBackground)
+        static let dexShadow = Color.black.opacity(0.08)
         
         /// Return appropriate accent color for a plant species
         /// - Parameter species: The latin name of the species or nil
@@ -78,6 +84,10 @@ struct Theme {
         static func staggered(index: Int, baseDelay: Double = 0.1) -> Animation {
             return smooth.delay(baseDelay * Double(index))
         }
+
+        // Floradex Specific Animations
+        static let floradexDefaultAnimation: Animation = .easeInOut
+        static let floradexFastAnimation: Animation = .easeInOut(duration: 0.2)
     }
     
     // MARK: - Metrics
@@ -86,6 +96,10 @@ struct Theme {
         static let iconSize: CGFloat = 24
         static let buttonSize: CGFloat = 52
         
+        // Floradex Specific Corner Radii
+        static let floradexLargeCardRadius: CGFloat = 32.0
+        static let floradexSmallCardRadius: CGFloat = 20.0
+
         struct Padding {
             static let small: CGFloat = 8
             static let medium: CGFloat = 16
@@ -121,4 +135,32 @@ extension View {
 // Add a convenient Color extension for lime color (missing in SwiftUI)
 extension Color {
     static let lime = Color(red: 0.7, green: 0.9, blue: 0.3)
+}
+
+// Helper for hex color initialization (optional, can be moved to Color extension)
+extension Color {
+    init(hex: String) {
+        let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
+        var int: UInt64 = 0
+        Scanner(string: hex).scanHexInt64(&int)
+        let a, r, g, b: UInt64
+        switch hex.count {
+        case 3: // RGB (12-bit)
+            (a, r, g, b) = (255, (int >> 8) * 17, (int >> 4 & 0xF) * 17, (int & 0xF) * 17)
+        case 6: // RGB (24-bit)
+            (a, r, g, b) = (255, int >> 16, int >> 8 & 0xFF, int & 0xFF)
+        case 8: // ARGB (32-bit)
+            (a, r, g, b) = (int >> 24, int >> 16 & 0xFF, int >> 8 & 0xFF, int & 0xFF)
+        default:
+            (a, r, g, b) = (1, 1, 1, 0) // Invalid format, return clear
+        }
+
+        self.init(
+            .sRGB,
+            red: Double(r) / 255,
+            green: Double(g) / 255,
+            blue: Double(b) / 255,
+            opacity: Double(a) / 255
+        )
+    }
 } 

@@ -18,6 +18,8 @@ protocol APIEndpoint {
     var headers: [String: String]? { get }
     var parameters: [String: Any]? { get } // For query params or JSON body
     var body: Data? { get } // For custom body data, e.g., multipart
+    /// Optional override for per-request timeout. Uses session default if nil.
+    var timeout: TimeInterval? { get }
 
     // Helper to build the URLRequest
     func asURLRequest() throws -> URLRequest
@@ -57,8 +59,16 @@ extension APIEndpoint {
         
         headers?.forEach { request.setValue($1, forHTTPHeaderField: $0) }
 
+        // Apply per-endpoint timeout if provided
+        if let timeoutInterval = timeout {
+            request.timeoutInterval = timeoutInterval
+        }
+
         return request
     }
+
+    // Provide default implementation so existing endpoints don't have to specify manually
+    var timeout: TimeInterval? { nil }
 }
 
 final class APIClient {

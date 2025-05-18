@@ -53,7 +53,7 @@ struct Buttons {
         let backgroundColor: Color
         let foregroundColor: Color
         
-        init(backgroundColor: Color = Color.accentColor, foregroundColor: Color = .white) {
+        init(backgroundColor: Color = Theme.Colors.primary, foregroundColor: Color = .white) {
             self.backgroundColor = backgroundColor
             self.foregroundColor = foregroundColor
         }
@@ -88,19 +88,25 @@ struct Buttons {
                 .font(Theme.Typography.button)
                 .padding(.vertical, 12)
                 .padding(.horizontal, 20)
-                .background(
+                .background {
                     Group {
                         if let tint = tint {
-                            Material.regularMaterial
-                                .opacity(0.7)
-                                .background(tint.opacity(0.1))
+                            ZStack {
+                                Rectangle()
+                                    .fill(Material.regularMaterial)
+                                    .opacity(0.7)
+                                Rectangle()
+                                    .fill(tint)
+                                    .opacity(0.1)
+                            }
                         } else {
-                            Material.regularMaterial
+                            Rectangle()
+                                .fill(Material.regularMaterial)
                                 .opacity(0.7)
                         }
                     }
                     .opacity(configuration.isPressed ? 0.7 : 1.0)
-                )
+                }
                 .clipShape(RoundedRectangle(cornerRadius: Theme.Metrics.cornerRadius))
                 .shadow(color: .black.opacity(0.1), radius: 3, x: 0, y: 1)
                 .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
@@ -139,7 +145,7 @@ extension View {
     ///   - backgroundColor: The background color of the button
     ///   - foregroundColor: The foreground color of the button
     /// - Returns: A button with the pill style applied
-    func pillButton(backgroundColor: Color = Color.accentColor, foregroundColor: Color = .white) -> some View {
+    func pillButton(backgroundColor: Color = Theme.Colors.primary, foregroundColor: Color = .white) -> some View {
         self.buttonStyle(Buttons.PillButtonStyle(backgroundColor: backgroundColor, foregroundColor: foregroundColor))
     }
     
@@ -163,7 +169,7 @@ extension View {
             .pillButton()
         
         Button("Glass Button") {}
-            .glassButton(tint: .blue)
+            .glassButton(tint: Theme.Colors.primary)
         
         Button(action: {}) {
             Image(systemName: "arrow.right")
