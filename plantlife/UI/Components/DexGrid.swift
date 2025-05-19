@@ -6,6 +6,8 @@ struct DexGrid: View {
     let onRefresh: () -> Void
     var onDelete: ((DexEntry) -> Void)? = nil
     
+    @Namespace private var heroNamespace
+    
     private let columns = [
         GridItem(.flexible(), spacing: 10),
         GridItem(.flexible(), spacing: 10)
@@ -18,10 +20,27 @@ struct DexGrid: View {
             } else {
                 LazyVGrid(columns: columns, spacing: 10) {
                     ForEach(entries) { entry in
-                        NavigationLink(destination: DexDetailView(entry: entry)) {
-                            DexCard(entry: entry) { onDelete?(entry) }
+                        GeometryReader { geo in
+                            let frame = geo.frame(in: .global)
+                            let cardMidY = frame.midY
+                            
+                            let screenHeight = UIScreen.main.bounds.height
+                            let distanceFromCenter = cardMidY - (screenHeight / 2)
+                            
+                            let parallaxFactor = 0.05
+                            let parallaxOffset = (distanceFromCenter * parallaxFactor) * -0.1
+
+                            let normalizedDistance = abs(distanceFromCenter) / (screenHeight / 2)
+                            let desaturationAmount = normalizedDistance.clamped(to: 0...0.6)
+
+                            NavigationLink(destination: DexDetailView(entry: entry, namespace: heroNamespace)) {
+                                DexCard(entry: entry, namespace: heroNamespace) { onDelete?(entry) }
+                                    .offset(y: parallaxOffset)
+                                    .saturation(1.0 - Double(desaturationAmount))
+                            }
+                            .buttonStyle(PlainButtonStyle())
                         }
-                        .buttonStyle(PlainButtonStyle())
+                        .frame(height: 200)
                     }
                 }
                 .padding(.horizontal, 10)

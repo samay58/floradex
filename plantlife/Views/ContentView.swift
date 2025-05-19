@@ -24,8 +24,7 @@ struct ContentView: View {
     var body: some View {
         ZStack {
             // Background
-            Theme.Colors.background
-                .ignoresSafeArea()
+            GameBoyScreenBackground()
             
             VStack(spacing: 0) {
                 // Top toolbar
@@ -147,20 +146,6 @@ struct ContentView: View {
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
             }
-            .overlay(
-                Button {
-                    withAnimation(Theme.Animations.snappy) {
-                        showingCamera = true
-                    }
-                } label: {
-                    Image(systemName: "camera.fill")
-                        .font(.system(size: 28, weight: .medium))
-                }
-                .circularButton(size: 70, backgroundColor: Theme.Colors.primary, foregroundColor: .white, hasBorder: false)
-                .padding(.trailing, 24)
-                .padding(.bottom, 40),
-                alignment: .bottomTrailing
-            )
             .fullScreenCover(isPresented: $showingCamera) {
                 if permissions.isFullyAuthorized {
                     CameraCaptureView()
@@ -169,6 +154,21 @@ struct ContentView: View {
                     PermissionsOverlayView()
                         .environmentObject(permissions)
                 }
+            }
+        }
+        .toolbar {
+            ToolbarItemGroup(placement: .bottomBar) {
+                Spacer()
+                Button {
+                    withAnimation(Theme.Animations.snappy) {
+                        showingCamera = true
+                    }
+                } label: {
+                    Image(systemName: "camera.fill")
+                        .font(.system(size: 24, weight: .medium))
+                }
+                .circularButton(size: 56, backgroundColor: Theme.Colors.primary, foregroundColor: .white, hasBorder: false)
+                Spacer()
             }
         }
         .sheet(isPresented: $showingInfoSheet) {

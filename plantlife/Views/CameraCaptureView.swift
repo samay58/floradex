@@ -4,57 +4,113 @@ import AVFoundation
 struct CameraCaptureView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var imageService: ImageSelectionService
+    @State private var isFlashEnabled: Bool = false
+    @State private var appearedAnimation: Bool = false
     
     var body: some View {
         ZStack {
-            // Camera controller
-            CameraViewControllerRepresentable { image in
-                print("Image captured: \(image.size.width)x\(image.size.height)")
-                imageService.selectedImage = image
-                dismiss()
-            }
-            .ignoresSafeArea()
+            // Black background for full-screen effect
+            Color.black.ignoresSafeArea()
             
-            // Camera controls overlay
-            VStack {
-                // Close button
-                HStack {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Image(systemName: "xmark")
+            GeometryReader { geometry in
+                VStack {
+                    // Glass Toolbar for controls
+                    GlassToolbar(style: .top) {
+                        HStack {
+                            Button {
+                                let generator = UIImpactFeedbackGenerator(style: .light)
+                                generator.impactOccurred()
+                                dismiss()
+                            } label: {
+                                Image(systemName: "xmark")
+                            }
+                            .circularButton(
+                                size: 44,
+                                backgroundColor: .black.opacity(0.5),
+                                foregroundColor: .white,
+                                hasBorder: false
+                            )
+                            
+                            Spacer()
+                            
+                            Button {
+                                let generator = UIImpactFeedbackGenerator(style: .light)
+                                generator.impactOccurred()
+                                isFlashEnabled.toggle()
+                            } label: {
+                                Image(systemName: isFlashEnabled ? "bolt.fill" : "bolt.slash")
+                            }
+                            .circularButton(
+                                size: 44,
+                                backgroundColor: .black.opacity(0.5),
+                                foregroundColor: isFlashEnabled ? .yellow : .white,
+                                hasBorder: false
+                            )
+                        }
+                        .padding(.horizontal)
                     }
-                    .circularButton(
-                        size: 44,
-                        backgroundColor: .black.opacity(0.5),
-                        foregroundColor: .white,
-                        hasBorder: false
-                    )
                     
                     Spacer()
+                    
+                    // Centered camera preview with GameBoy frame
+                    ZStack {
+                        GameBoyCameraFrame {
+                            // Camera controller
+                            CameraViewControllerRepresentable(flashEnabled: isFlashEnabled) { image in
+                                let generator = UINotificationFeedbackGenerator()
+                                generator.notificationOccurred(.success)
+                                
+                                print("Image captured: \(image.size.width)x\(image.size.height)")
+                                imageService.selectedImage = image
+                                dismiss()
+                            }
+                        }
+                        .frame(maxWidth: geometry.size.width)
+                        .opacity(appearedAnimation ? 1 : 0)
+                        .offset(y: appearedAnimation ? 0 : 20)
+                    }
+                    .frame(maxHeight: .infinity)
+                    
+                    // Shutter button at bottom
+                    HStack {
+                        Spacer()
+                        
+                        PixelButton(style: .primary, icon: "circle.fill") {
+                            // Handled in the PixelButton via haptic feedback
+                            // Camera will take photo
+                        }
+                        .scaleEffect(appearedAnimation ? 1 : 0.95)
+                        .padding(.bottom, 30)
+                        
+                        Spacer()
+                    }
                 }
-                .padding()
-                
-                Spacer()
             }
         }
         .onAppear {
             print("CameraCaptureView appeared")
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                appearedAnimation = true
+            }
         }
     }
 }
 
 // MARK: - UIViewController Wrapper
 struct CameraViewControllerRepresentable: UIViewControllerRepresentable {
+    var flashEnabled: Bool = false
     var onImageCaptured: (UIImage) -> Void
     
     func makeUIViewController(context: Context) -> CameraViewController {
         let controller = CameraViewController()
         controller.onImageCaptured = onImageCaptured
+        controller.flashEnabled = flashEnabled
         return controller
     }
     
-    func updateUIViewController(_ uiViewController: CameraViewController, context: Context) {}
+    func updateUIViewController(_ uiViewController: CameraViewController, context: Context) {
+        uiViewController.flashEnabled = flashEnabled
+    }
 }
 
 // MARK: - Camera View Controller
@@ -66,8 +122,9 @@ class CameraViewController: UIViewController {
     
     // Callback
     var onImageCaptured: ((UIImage) -> Void)?
+    var flashEnabled: Bool = false
     
-    // Shutter button
+    // Shutter button (will be controlled by SwiftUI now)
     private lazy var shutterButton: UIButton = {
         let button = UIButton(type: .system)
         button.translatesAutoresizingMaskIntoConstraints = false
@@ -83,7 +140,6 @@ class CameraViewController: UIViewController {
         super.viewDidLoad()
         print("Camera view controller loaded")
         setupCamera()
-        setupUI()
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -146,17 +202,6 @@ class CameraViewController: UIViewController {
         print("Camera setup completed")
     }
     
-    private func setupUI() {
-        // Add shutter button
-        view.addSubview(shutterButton)
-        NSLayoutConstraint.activate([
-            shutterButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            shutterButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -30),
-            shutterButton.widthAnchor.constraint(equalToConstant: 72),
-            shutterButton.heightAnchor.constraint(equalToConstant: 72)
-        ])
-    }
-    
     private func startSession() {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             self?.captureSession?.startRunning()
@@ -169,14 +214,14 @@ class CameraViewController: UIViewController {
         print("Camera session stopped")
     }
     
-    @objc private func capturePhoto() {
+    @objc public func capturePhoto() {
         guard let photoOutput = photoOutput else {
             print("Photo output not available")
             return
         }
         
         let settings = AVCapturePhotoSettings()
-        settings.flashMode = .auto
+        settings.flashMode = flashEnabled ? .on : .auto
         
         photoOutput.capturePhoto(with: settings, delegate: self)
         print("Capture photo requested")

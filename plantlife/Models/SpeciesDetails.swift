@@ -109,4 +109,87 @@ final class SpeciesDetails: Identifiable, Codable {
         try container.encodeIfPresent(funFacts, forKey: .funFacts)
         try container.encode(lastUpdated, forKey: .lastUpdated)
     }
-} 
+}
+
+// MARK: - Parsed Properties for Gauges
+extension SpeciesDetails {
+    var parsedSunlightLevel: SunlightLevel {
+        guard let sunlightString = sunlight?.lowercased() else { return .partialSun } // Default
+        if sunlightString.contains("full sun") {
+            return .fullSun
+        } else if sunlightString.contains("partial") {
+            return .partialSun
+        } else if sunlightString.contains("shade") {
+            return .shade
+        }
+        return .partialSun // Default
+    }
+
+    var parsedWaterRequirement: Double { // Normalized 0.0 to 1.0
+        guard let waterString = water?.lowercased() else { return 0.5 } // Default
+        if waterString.contains("high") || waterString.contains("keep moist") || waterString.contains("frequent") {
+            return 0.8
+        } else if waterString.contains("moderate") || waterString.contains("average") {
+            return 0.5
+        } else if waterString.contains("low") || waterString.contains("dry out") || waterString.contains("infrequent") {
+            return 0.2
+        }
+        return 0.5 // Default
+    }
+
+    var parsedTemperatureRange: ClosedRange<Double>? {
+        guard let tempString = temperature else { return nil }
+
+        // Regex to find numbers, can be X, X-Y, X - Y
+        let regex = try! NSRegularExpression(pattern: #"(\d+(?:\.\d+)?)"#)
+        let nsRange = NSRange(tempString.startIndex..<tempString.endIndex, in: tempString)
+        let matches = regex.matches(in: tempString, options: [], range: nsRange)
+        
+        let numbers = matches.compactMap { match -> Double? in
+            if let range = Range(match.range(at: 1), in: tempString) {
+                return Double(String(tempString[range]))
+            }
+            return nil
+        }
+
+        if numbers.count == 1 {
+            return numbers[0]...numbers[0] // Or perhaps a small range like numbers[0]-2...numbers[0]+2
+        } else if numbers.count >= 2 {
+            let sortedNumbers = numbers.sorted()
+            return sortedNumbers[0]...sortedNumbers[1]
+        }
+        
+        return nil // Default if parsing fails
+    }
+    
+    // Example for a "current" temperature if we had such data. For now, ThermoRangeView might not use it.
+    // var currentTemperature: Double? { return nil }
+
+
+    var parsedSoilPH: Double? { // Normalized 0.0 to 1.0 for pH 0-14 scale
+        guard let soilString = soil?.lowercased() else { return 0.5 } // Default to neutral pH 7
+
+        // Regex to find pH values like "pH 6.0", "ph 5.5-6.5"
+        let regex = try! NSRegularExpression(pattern: #"ph\s*(\d+(?:\.\d+)?)(?:\s*-\s*(\d+(?:\.\d+)?))?"#)
+        let nsRange = NSRange(soilString.startIndex..<soilString.endIndex, in: soilString)
+        
+        if let match = regex.firstMatch(in: soilString, options: [], range: nsRange) {
+            var phValues: [Double] = []
+            if let range1 = Range(match.range(at: 1), in: soilString), let val1 = Double(String(soilString[range1])) {
+                phValues.append(val1)
+            }
+            if match.numberOfRanges > 2, let range2 = Range(match.range(at: 2), in: soilString), let val2 = Double(String(soilString[range2])) {
+                phValues.append(val2)
+            }
+
+            if phValues.isEmpty {
+                return 0.5 // Neutral
+            }
+            
+            let averagePh = phValues.reduce(0, +) / Double(phValues.count)
+            return (averagePh / 14.0).clamped(to: 0.0...1.0) // Normalize to 0-14 scale
+        }
+        
+        return 0.5 // Default to neutral pH 7 if no pH found
+    }
+}

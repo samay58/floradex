@@ -58,6 +58,71 @@ Develop a SwiftUI iOS application that identifies plant species from user-provid
 - Before making significant changes, outline a brief plan or rationale.
 - Continuously update this `.cursorrules` file with new insights and decisions as the project evolves.
 
+# Theme
+[consistent-colors]
+description = "Maintain a consistent color palette by accessing colors through Theme.Colors."
+advice = "Use Theme.Colors instead of hardcoded values. This will maintain consistency with the GameBoy-inspired color scheme."
+fix = "Replace hardcoded colors with Theme.Colors.primary, Theme.Colors.secondary, Theme.Colors.surface, etc."
+
+# UI Patterns
+[gameboy-style]
+description = "Follow the GameBoy-inspired UI style"
+advice = "The app follows a GameBoy-inspired UI with pixel-style borders, limited color palette, and retro typography."
+examples = ["Use Font.pressStart2P() for headers", "Theme.Colors for GameBoy color palette", "Pixelated borders and corners"]
+
+[glass-bar]
+description = "Use GlassBar for top navigation controls"
+advice = "Controls at the top of screens should use GlassBar for a consistent look"
+fix = "Replace navigation header elements with GlassBar"
+
+# Camera
+[camera-frame]
+description = "Use GameBoyCameraFrame for camera views"
+advice = "Camera previews should use GameBoyCameraFrame for consistency"
+fix = "Wrap camera content in GameBoyCameraFrame and maintain 4:3 aspect ratio"
+
+# Card Pager
+[card-peel]
+description = "Use DexCardPager for card-based paged content"
+advice = "For multi-page content, use DexCardPager instead of TabView for consistent card-peel animations"
+fix = "Replace TabView with DexCardPager and convert tab views to DexDetailCard-conforming views"
+
+# Buttons
+[pixel-buttons]
+description = "Use PixelButton for main action buttons"
+advice = "Main action buttons should use PixelButton style for consistency with the GameBoy aesthetic"
+fix = "Replace standard buttons with PixelButton for primary actions"
+
+# Typography
+[press-start-font]
+description = "Use Press Start 2P font for headers and titling"
+advice = "Use Font.pressStart2P(size:) for headers to maintain the GameBoy aesthetic"
+fix = "Replace .font(.title) with .font(Font.pressStart2P(size: 18))"
+
+# Feedback
+[haptics]
+description = "Include haptic feedback with important UI interactions"
+advice = "Important actions should have appropriate haptic feedback"
+examples = ["UIImpactFeedbackGenerator(style: .medium).impactOccurred()"]
+
+# Performance
+[lazy-loading]
+description = "Lazy load content in card pagers"
+advice = "Use shouldShowCard() pattern in DexCardPager to only render visible cards"
+fix = "Add conditional rendering based on visibility state"
+
+# Accessibility 
+[accessibility-actions]
+description = "Include accessibilityAction for swipeable content"
+advice = "Add accessibilityAction for keyboard navigation in swipeable content"
+examples = [".accessibilityAction(named: \"Next Card\") { ... }", ".accessibilityAction(named: \"Previous Card\") { ... }"]
+
+# Animation
+[spring-animations]
+description = "Use consistent spring animations for a bouncy, playful feel"
+advice = "Use .animation(.interactiveSpring(response: 0.45, dampingFraction: 0.85))"
+fix = "Replace default animations with spring animations using the standard spring constants"
+
 {
   "project": "PlantIdentifierApp",
   "description": "An iOS application for identifying plant species and providing care information using on-device and remote machine learning models.",

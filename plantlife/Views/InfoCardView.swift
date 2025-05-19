@@ -9,6 +9,7 @@ struct InfoCardView: View {
     @State private var selectedTab: Tab = .quick
     @State private var appearAnimation = false
     @State private var bulletAppearDelay: Double = 0.1
+    @Namespace private var underlineNS
 
     enum Tab: String, CaseIterable, Identifiable {
         case quick = "Quick"
@@ -31,30 +32,9 @@ struct InfoCardView: View {
                 .opacity(appearAnimation ? 1 : 0)
                 .offset(y: appearAnimation ? 0 : 20)
             
-            // Modern segmented control with icons
-            HStack(spacing: 0) {
-                ForEach(Tab.allCases) { tab in
-                    Button {
-                        withAnimation(Theme.Animations.snappy) {
-                            selectedTab = tab
-                        }
-                    } label: {
-                        VStack(spacing: 4) {
-                            Image(systemName: tab.icon)
-                                .font(.system(size: 16, weight: .medium))
-                            Text(tab.rawValue)
-                                .font(.system(size: 13, weight: .medium))
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 8)
-                        .background(selectedTab == tab ? Theme.Colors.accent(for: species).opacity(0.15) : .clear)
-                        .foregroundStyle(selectedTab == tab ? Theme.Colors.accent(for: species) : Theme.Colors.secondary)
-                    }
-                }
-            }
-            .background(Color(.systemGray6))
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-            .padding(.horizontal, 4)
+            // Chip ribbon with pixel underline
+            ChipRibbon
+                .padding(.horizontal, 4)
 
             Group {
                 switch selectedTab {
@@ -233,10 +213,9 @@ struct InfoCardView: View {
                         .foregroundStyle(Theme.Colors.secondary)
                 }
                 if let conf = confidence {
-                    ProgressView(value: conf)
-                        .progressViewStyle(.linear)
-                        .tint(Theme.Colors.accent(for: species))
-                        .frame(maxWidth: 120)
+                    PixelGauge(value: conf, size: 48, foreground: Theme.Colors.accent(for: species))
+                        .accessibilityLabel(Text("Confidence"))
+                        .accessibilityValue(Text(String(format: "%.0f%%", conf * 100)))
                 }
             }
             Spacer()
@@ -251,6 +230,43 @@ struct InfoCardView: View {
             }
         }
         .padding(.bottom, 4)
+    }
+
+    // MARK: - Chip Ribbon
+    private var ChipRibbon: some View {
+        HStack(spacing: 12) {
+            ForEach(Tab.allCases) { tab in
+                Button {
+                    withAnimation(Theme.Animations.snappy) { selectedTab = tab }
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: tab.icon)
+                            .font(.system(size: 12, weight: .medium))
+                        Text(tab.rawValue)
+                            .font(.caption.weight(.medium))
+                    }
+                    .padding(.vertical, 6)
+                    .padding(.horizontal, 12)
+                    .background(
+                        Capsule()
+                            .fill(selectedTab == tab ? Theme.Colors.accent(for: species).opacity(0.2) : Color(.systemGray5).opacity(0.4))
+                    )
+                    .foregroundStyle(selectedTab == tab ? Theme.Colors.accent(for: species) : Theme.Colors.secondary)
+                    .overlay(
+                        Group {
+                            if selectedTab == tab {
+                                Rectangle()
+                                    .fill(Theme.Colors.accent(for: species))
+                                    .frame(height: 4)
+                                    .matchedGeometryEffect(id: "underline", in: underlineNS)
+                                    .offset(y: 14)
+                            }
+                        }, alignment: .bottom
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+        }
     }
 }
 

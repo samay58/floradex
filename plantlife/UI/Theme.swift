@@ -10,6 +10,12 @@ struct Theme {
         static let background = Color(.systemBackground) // Main surface
         static let surface = Color(.secondarySystemBackground)
         
+        // Additional Text / Surface aliases for gauges & components
+        static let text = primary
+        static let textSecondary = secondary
+        static let textDisabled = Color.gray.opacity(0.5)
+        static let surfaceVariant = surface
+        
         // Plant Type Colors
         static let flower = Color.pink
         static let tree = Color.green
@@ -61,16 +67,16 @@ struct Theme {
         static let title3 = Font.title3.weight(.semibold)
         
         // Body Styles
-        static let body = Font.system(.body, design: .rounded)
-        static let bodyMedium = Font.system(.body, design: .rounded).weight(.medium)
-        static let bodyBold = Font.system(.body, design: .rounded).weight(.bold)
+        static let body = Font.jetBrainsMono(size: 16)
+        static let bodyMedium = Font.jetBrainsMono(size: 16).weight(.medium)
+        static let bodyBold = Font.jetBrainsMono(size: 16).weight(.bold)
         
         // Caption Styles
-        static let caption = Font.system(.caption, design: .rounded)
-        static let captionMedium = Font.system(.caption, design: .rounded).weight(.medium)
+        static let caption = Font.jetBrainsMono(size: 12)
+        static let captionMedium = Font.jetBrainsMono(size: 12).weight(.medium)
         
         // Button Styles
-        static let button = Font.system(.body, design: .rounded).weight(.medium)
+        static let button = Font.jetBrainsMono(size: 16).weight(.medium)
     }
     
     // MARK: - Animations

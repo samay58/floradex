@@ -19,17 +19,19 @@ struct TagFilterView: View {
                 .padding(.leading) // Add padding to the first item
 
                 ForEach(allTags, id: \.self) { tag in
-                    TagChip(
+                    PhysicsTagChip(
                         tagName: tag,
-                        isSelected: selectedTags.contains(tag)
-                    ) {
-                        // Toggle selection for this tag
-                        if selectedTags.contains(tag) {
-                            selectedTags.remove(tag)
-                        } else {
-                            selectedTags.insert(tag)
-                        }
-                    }
+                        isSelected: Binding<Bool>(
+                            get: { selectedTags.contains(tag) },
+                            set: { newValue in
+                                if newValue {
+                                    selectedTags.insert(tag)
+                                } else {
+                                    selectedTags.remove(tag)
+                                }
+                            })
+                    )
+                    .frame(height: 32) // Fix a height so spring physics behaves consistently
                 }
             }
             .padding(.vertical, 8) // Padding for the HStack within the ScrollView

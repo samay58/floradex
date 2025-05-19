@@ -52,6 +52,7 @@ struct PlantLifeApp: App {
                     }
             }
             .environmentObject(imageService)
+            .environment(\.font, Font.jetBrainsMono(size: 16))
         }
         .modelContainer(modelContainer)
     }

@@ -179,4 +179,81 @@ extension View {
     }
     .padding()
     .background(Color.gray.opacity(0.1))
+}
+
+struct PixelButton: View {
+    enum Style {
+        case primary
+        case secondary
+        
+        var backgroundColor: Color {
+            switch self {
+            case .primary:
+                return Theme.Colors.primary
+            case .secondary:
+                return Theme.Colors.secondary
+            }
+        }
+        
+        var foregroundColor: Color {
+            switch self {
+            case .primary, .secondary:
+                return .white
+            }
+        }
+        
+        var strokeColor: Color {
+            switch self {
+            case .primary:
+                return Color("#8BAC0F")
+            case .secondary:
+                return Color.gray.opacity(0.8)
+            }
+        }
+    }
+    
+    let style: Style
+    let icon: String
+    var action: () -> Void
+    
+    @State private var isPressed = false
+    
+    var body: some View {
+        Button(action: {
+            let impactGenerator = UIImpactFeedbackGenerator(style: .heavy)
+            impactGenerator.prepare()
+            
+            // Provide haptic feedback
+            impactGenerator.impactOccurred()
+            
+            action()
+        }) {
+            Image(systemName: icon)
+                .font(.system(size: 24, weight: .bold))
+                .foregroundColor(style.foregroundColor)
+                .frame(width: 72, height: 72)
+                .background(style.backgroundColor)
+                .clipShape(Circle())
+                .overlay(
+                    Circle()
+                        .strokeBorder(style.strokeColor, lineWidth: 2)
+                        .padding(4)
+                )
+                .shadow(color: Color("#0F380F").opacity(0.5), radius: 2, x: 0, y: 2)
+                .scaleEffect(isPressed ? 0.95 : 1.0)
+        }
+        .buttonStyle(PlainButtonStyle())
+        .pressEvents(onPress: { isPressed = true }, onRelease: { isPressed = false })
+    }
+}
+
+// Add a helper for press events
+extension View {
+    func pressEvents(onPress: @escaping () -> Void, onRelease: @escaping () -> Void) -> some View {
+        self.simultaneousGesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { _ in onPress() }
+                .onEnded { _ in onRelease() }
+        )
+    }
 } 

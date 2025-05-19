@@ -13,4 +13,16 @@ extension Font {
     // static func mPlus1CodeBold(size: CGFloat) -> Font {
     //     return .custom("MPLUS1Code-Bold", size: size)
     // }
+
+    static func jetBrainsMono(size: CGFloat) -> Font {
+        return .custom("JetBrainsMono-Regular", size: size)
+    }
+    
+    // Convenience accessors for common weights if needed
+    static func jetBrainsMonoBold(size: CGFloat) -> Font {
+        return .custom("JetBrainsMono-Bold", size: size)
+    }
+    static func jetBrainsMonoMedium(size: CGFloat) -> Font {
+        return .custom("JetBrainsMono-Medium", size: size)
+    }
 } 

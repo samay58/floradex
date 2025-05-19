@@ -3,14 +3,16 @@ import SwiftData
 
 struct DexDetailView: View {
     let entry: DexEntry
-    // SpeciesDetails will be fetched based on entry.latinName
+    var namespace: Namespace.ID? = nil // Optional for previews/other uses
+    
     @Query var speciesDetailItems: [SpeciesDetails]
+    
+    // AppSettings for experimental features
+    @AppStorage("experimentalPager") private var useExperimentalPager: Bool = true
 
-    // State for TabView
-    @State private var selectedTab: Tab = .overview
-
-    init(entry: DexEntry) {
+    init(entry: DexEntry, namespace: Namespace.ID? = nil) {
         self.entry = entry
+        self.namespace = namespace // Store namespace
         let latinName = entry.latinName
         // Filter SpeciesDetails based on the latinName of the entry.
         // Note: Ensure latinName is unique in SpeciesDetails or handle multiple results.
@@ -23,44 +25,28 @@ struct DexDetailView: View {
         speciesDetailItems.first 
     }
 
-    enum Tab {
-        case overview
-        case care
-        case growth
-    }
-
     var body: some View {
         VStack(spacing: 0) {
             // Header (e.g., Plant Name, Sprite, basic info - can be designed later)
             detailHeaderView
                 .padding()
-                .background(Material.thin) // Example background
-
-            TabView(selection: $selectedTab) {
-                OverviewTabView(entry: entry, details: speciesDetails)
-                    .tabItem {
-                        Label("Overview", systemImage: "doc.text")
-                    }
-                    .tag(Tab.overview)
-                
-                CareTabView(details: speciesDetails)
-                    .tabItem {
-                        Label("Care", systemImage: "leaf.fill") // leaf.fill for better visibility
-                    }
-                    .tag(Tab.care)
-                
-                GrowthTabView(details: speciesDetails)
-                    .tabItem {
-                        Label("Growth", systemImage: "chart.bar.xaxis") // chart.bar.xaxis or chart.bar
-                    }
-                    .tag(Tab.growth)
+                .background(Material.thin)
+            
+            if useExperimentalPager {
+                // New card-peel pager
+                DexCardPager(cards: [
+                    AnyDexDetailCard(OverviewCard(entry: entry, details: speciesDetails)),
+                    AnyDexDetailCard(CareCard(details: speciesDetails)),
+                    AnyDexDetailCard(GrowthCard(details: speciesDetails))
+                ])
+                .transition(.opacity)
+            } else {
+                // Legacy TabView (for compatibility)
+                LegacyTabView(entry: entry, details: speciesDetails)
             }
-            // .tabViewStyle(.page(indexDisplayMode: .never)) // For a different style without visible tabs
-            // .frame(maxHeight: .infinity) // Ensure TabView takes available space
         }
         .navigationTitle(speciesDetails?.commonName ?? entry.latinName)
         .navigationBarTitleDisplayMode(.inline)
-        // No longer need .onAppear to fetch details, @Query handles it.
     }
     
     private var detailHeaderView: some View {
@@ -73,6 +59,9 @@ struct DexDetailView: View {
                     .frame(width: 80, height: 80)
                     .background(Theme.Colors.surface)
                     .cornerRadius(12)
+                    .if(namespace != nil) { view in // Conditionally apply if namespace is provided
+                        view.matchedGeometryEffect(id: "sprite-\(entry.id)", in: namespace!, isSource: false)
+                    }
             } else {
                 Image(systemName: "photo.circle.fill") // Placeholder
                     .resizable()
@@ -96,125 +85,151 @@ struct DexDetailView: View {
     }
 }
 
-// Placeholder Tab Views - These will be fleshed out
-struct OverviewTabView: View {
+// Legacy TabView for backward compatibility
+private struct LegacyTabView: View {
     let entry: DexEntry
     let details: SpeciesDetails?
-
-    private var wikipediaURL: URL? {
-        guard let latinName = details?.latinName else { return nil }
-        let formattedName = latinName.replacingOccurrences(of: " ", with: "_")
-        return URL(string: "https://en.wikipedia.org/wiki/\(formattedName)")
+    @State private var selectedTab: Tab = .overview
+    
+    enum Tab {
+        case overview
+        case care
+        case growth
     }
-
+    
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                Text("Summary")
-                    .font(Font.pressStart2P(size: 16))
-                Text(details?.summary ?? "No summary available.")
-                    .padding(.bottom)
-                
-                if let funFacts = details?.funFacts, !funFacts.isEmpty {
-                    Text("Fun Facts")
-                        .font(Font.pressStart2P(size: 16))
-                    ForEach(funFacts, id: \.self) { fact in
-                        Label(fact, systemImage: "sparkle")
-                    }
-                    .padding(.bottom)
+        TabView(selection: $selectedTab) {
+            OverviewLegacyTab(entry: entry, details: details)
+                .tabItem {
+                    Label("Overview", systemImage: "doc.text")
                 }
-                
-                if let notes = entry.notes, !notes.isEmpty {
-                    Text("My Notes")
+                .tag(Tab.overview)
+            
+            CareLegacyTab(details: details)
+                .tabItem {
+                    Label("Care", systemImage: "leaf.fill")
+                }
+                .tag(Tab.care)
+            
+            GrowthLegacyTab(details: details)
+                .tabItem {
+                    Label("Growth", systemImage: "chart.bar.xaxis")
+                }
+                .tag(Tab.growth)
+        }
+    }
+    
+    // Legacy tab views - these are private to avoid confusion with the new card views
+    private struct OverviewLegacyTab: View {
+        let entry: DexEntry
+        let details: SpeciesDetails?
+        
+        private var wikipediaURL: URL? {
+            guard let latinName = details?.latinName else { return nil }
+            let formattedName = latinName.replacingOccurrences(of: " ", with: "_")
+            return URL(string: "https://en.wikipedia.org/wiki/\(formattedName)")
+        }
+        
+        var body: some View {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Summary")
                         .font(Font.pressStart2P(size: 16))
-                        .padding(.top)
-                    Text(notes)
+                    Text(details?.summary ?? "No summary available.")
                         .padding(.bottom)
-                }
-
-                // Learn More Section
-                if let url = wikipediaURL {
-                    Text("Learn More")
-                        .font(Font.pressStart2P(size: 16))
-                        .padding(.top)
-                    Link("View on Wikipedia", destination: url)
-                        .font(.callout)
-                        .foregroundColor(Theme.Colors.accent(for: details?.latinName ?? "default"))
-                }
-            }
-            .padding()
-        }
-    }
-}
-
-struct CareTabView: View {
-    let details: SpeciesDetails?
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                Text("Care Guide")
-                    .font(Font.pressStart2P(size: 16))
-                PlantInfo.InfoRow(label: "Sunlight", value: details?.sunlight, accentColor: Theme.Colors.accent(for: "Sunlight"))
-                PlantInfo.InfoRow(label: "Water", value: details?.water, accentColor: Theme.Colors.accent(for: "Water"))
-                PlantInfo.InfoRow(label: "Soil", value: details?.soil, accentColor: Theme.Colors.accent(for: "Soil"))
-                PlantInfo.InfoRow(label: "Temperature", value: details?.temperature, accentColor: Theme.Colors.accent(for: "Temperature"))
-            }
-            .padding()
-        }
-    }
-}
-
-struct GrowthTabView: View {
-    let details: SpeciesDetails?
-
-    // Placeholder logic for care difficulty - replace with actual data/logic
-    private var careDifficulty: (value: Double, label: String) {
-        guard let details = details else { return (0.5, "Unknown") }
-        // Example: Deriving from commonName length for visual variety in preview
-        // In a real app, this would come from SpeciesDetails or be a more complex heuristic.
-        let nameLength = details.commonName?.count ?? 10
-        if nameLength < 15 {
-            return (0.8, "Easy") // Higher value = easier
-        } else if nameLength < 25 {
-            return (0.5, "Moderate")
-        } else {
-            return (0.2, "Hard")
-        }
-    }
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                Text("Growth & Habit")
-                    .font(Font.pressStart2P(size: 16))
-                PlantInfo.InfoRow(label: "Growth Habit", value: details?.growthHabit, accentColor: Theme.Colors.accent(for: "Growth"))
-                PlantInfo.InfoRow(label: "Bloom Time", value: details?.bloomTime, accentColor: Theme.Colors.accent(for: "Bloom"))
-                
-                // Placeholder Gauge for Care Difficulty
-                if #available(iOS 16.0, *) { // Gauge is iOS 16+
-                    Text("Care Difficulty") // Title for the gauge section
-                        .font(Font.pressStart2P(size: 14))
-                        .padding(.top)
                     
-                    Gauge(value: careDifficulty.value, label: {
-                        Text(careDifficulty.label) // Label within the gauge (e.g., "Easy", "Moderate")
-                    }) {
-                        // Current value as text below/beside gauge if desired
-                        Text(String(format: "%.0f%% Easy", careDifficulty.value * 100))
-                            .font(.caption)
+                    if let funFacts = details?.funFacts, !funFacts.isEmpty {
+                        Text("Fun Facts")
+                            .font(Font.pressStart2P(size: 16))
+                        ForEach(funFacts, id: \.self) { fact in
+                            Label(fact, systemImage: "sparkle")
+                        }
+                        .padding(.bottom)
                     }
-                    .gaugeStyle(.accessoryCircular) // Example style
-                    // TODO: Tint color should match dominant color of the sprite or care level
-                    .tint(careDifficulty.value > 0.6 ? .green : (careDifficulty.value > 0.3 ? .orange : .red)) // Placeholder tint based on difficulty
-                    .padding(.bottom)
-                } else {
-                    // Fallback on earlier versions
-                    PlantInfo.InfoRow(label: "Care Difficulty", value: careDifficulty.label, accentColor: Theme.Colors.accent(for: "Difficulty"))
+                    
+                    if let notes = entry.notes, !notes.isEmpty {
+                        Text("My Notes")
+                            .font(Font.pressStart2P(size: 16))
+                            .padding(.top)
+                        Text(notes)
+                            .padding(.bottom)
+                    }
+                    
+                    if let url = wikipediaURL {
+                        Text("Learn More")
+                            .font(Font.pressStart2P(size: 16))
+                            .padding(.top)
+                        Link("View on Wikipedia", destination: url)
+                            .font(.callout)
+                            .foregroundColor(Theme.Colors.accent(for: details?.latinName ?? "default"))
+                    }
                 }
-                
-                // ScrollViewReader for stat bars would go here if we have bar-like stats
+                .padding()
             }
-            .padding()
+        }
+    }
+    
+    private struct CareLegacyTab: View {
+        let details: SpeciesDetails?
+        
+        var body: some View {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Care Guide")
+                        .font(Font.pressStart2P(size: 16))
+                    PlantInfo.InfoRow(label: "Sunlight", value: details?.sunlight, accentColor: Theme.Colors.accent(for: "Sunlight"))
+                    PlantInfo.InfoRow(label: "Water", value: details?.water, accentColor: Theme.Colors.accent(for: "Water"))
+                    PlantInfo.InfoRow(label: "Soil", value: details?.soil, accentColor: Theme.Colors.accent(for: "Soil"))
+                    PlantInfo.InfoRow(label: "Temperature", value: details?.temperature, accentColor: Theme.Colors.accent(for: "Temperature"))
+                }
+                .padding()
+            }
+        }
+    }
+    
+    private struct GrowthLegacyTab: View {
+        let details: SpeciesDetails?
+        
+        private var careDifficulty: (value: Double, label: String) {
+            guard let details = details else { return (0.5, "Unknown") }
+            let nameLength = details.commonName?.count ?? 10
+            if nameLength < 15 {
+                return (0.8, "Easy")
+            } else if nameLength < 25 {
+                return (0.5, "Moderate")
+            } else {
+                return (0.2, "Hard")
+            }
+        }
+        
+        var body: some View {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Growth & Habit")
+                        .font(Font.pressStart2P(size: 16))
+                    PlantInfo.InfoRow(label: "Growth Habit", value: details?.growthHabit, accentColor: Theme.Colors.accent(for: "Growth"))
+                    PlantInfo.InfoRow(label: "Bloom Time", value: details?.bloomTime, accentColor: Theme.Colors.accent(for: "Bloom"))
+                    
+                    if #available(iOS 16.0, *) {
+                        Text("Care Difficulty")
+                            .font(Font.pressStart2P(size: 14))
+                            .padding(.top)
+                        
+                        Gauge(value: careDifficulty.value, label: {
+                            Text(careDifficulty.label)
+                        }) {
+                            Text(String(format: "%.0f%% Easy", careDifficulty.value * 100))
+                                .font(.caption)
+                        }
+                        .gaugeStyle(.accessoryCircular)
+                        .tint(careDifficulty.value > 0.6 ? .green : (careDifficulty.value > 0.3 ? .orange : .red))
+                        .padding(.bottom)
+                    } else {
+                        PlantInfo.InfoRow(label: "Care Difficulty", value: careDifficulty.label, accentColor: Theme.Colors.accent(for: "Difficulty"))
+                    }
+                }
+                .padding()
+            }
         }
     }
 }
@@ -253,7 +268,7 @@ struct DexDetailView_Previews: PreviewProvider {
 
         return NavigationStack {
             // Preview with the entry that has corresponding SpeciesDetails
-            DexDetailView(entry: PreviewHelper.sampleDexEntry)
+            DexDetailView(entry: PreviewHelper.sampleDexEntry, namespace: nil)
         }
         .modelContainer(previewContainer)
     }
