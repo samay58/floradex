@@ -2,7 +2,7 @@ import Foundation
 import SwiftData
 
 @Model
-final class DexEntry {
+final class DexEntry: Sendable {
     @Attribute(.unique) var id: Int      // Floradex number, e.g., 1, 2, 3
     var createdAt: Date
     var latinName: String                // Foreign Key to SpeciesDetails

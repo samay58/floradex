@@ -11,27 +11,26 @@ struct TagFilterView: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
                 // Optional: "All" button to clear selection
-                Button(action: { 
+                TagChip(
+                    tagName: "All", 
+                    isSelected: selectedTags.isEmpty
+                ) {
                     selectedTags.removeAll()
-                }) {
-                    TagChip(tagName: "All", isSelected: selectedTags.isEmpty)
                 }
                 .padding(.leading) // Add padding to the first item
 
                 ForEach(allTags, id: \.self) { tag in
-                    PhysicsTagChip(
+                    TagChip(
                         tagName: tag,
-                        isSelected: Binding<Bool>(
-                            get: { selectedTags.contains(tag) },
-                            set: { newValue in
-                                if newValue {
+                        isSelected: selectedTags.contains(tag)
+                    ) {
+                        if selectedTags.contains(tag) {
+                            selectedTags.remove(tag)
+                        } else {
                                     selectedTags.insert(tag)
-                                } else {
-                                    selectedTags.remove(tag)
+                        }
                                 }
-                            })
-                    )
-                    .frame(height: 32) // Fix a height so spring physics behaves consistently
+                    .frame(height: 32) // Fix a height for consistent layout
                 }
             }
             .padding(.vertical, 8) // Padding for the HStack within the ScrollView

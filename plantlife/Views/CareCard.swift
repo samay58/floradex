@@ -4,84 +4,105 @@ struct CareCard: View, DexDetailCard {
     let id: Int = 1 // Second card
     let details: SpeciesDetails?
     
-    // State for interactive DropletLevelView
-    @State private var currentMoisture: Double = 0.5 // Default, will be updated
-
     var accentColor: Color {
-        Theme.Colors.accent(for: "Care")
+        Theme.Colors.primaryGreen // Use consistent primary green
     }
     
     var body: some View {
         ScrollView {
-            // Main VStack for all content in the card
-            VStack(alignment: .leading, spacing: Theme.Metrics.Padding.large) { // Consistent large spacing between sections
-                Text("Care Guide") // Card's main title
-                    .font(Font.pressStart2P(size: 16))
-                    .padding(.bottom, Theme.Metrics.Padding.small) // Space after main title
-                
-                // Sunlight Section
-                if details?.sunlight != nil || details?.parsedSunlightLevel != nil {
-                    VStack(alignment: .leading, spacing: Theme.Metrics.Padding.small) {
-                        Text("Sunlight")
-                            .font(Font.pressStart2P(size: 14)) // Sub-section title size
-                            .foregroundColor(Theme.Colors.accent(for: "Sunlight"))
-                        SunlightGaugeView(currentSunlightLevel: details?.parsedSunlightLevel ?? .partialSun)
-                    }
-                } else {
-                    PlantInfo.InfoRow(label: "Sunlight", value: "N/A", accentColor: Theme.Colors.accent(for: "Sunlight"))
-                }
-                
-                // Water Section
-                if details?.water != nil || details?.parsedWaterRequirement != nil {
-                    VStack(alignment: .leading, spacing: Theme.Metrics.Padding.small) {
-                        Text("Water")
-                            .font(Font.pressStart2P(size: 14))
-                            .foregroundColor(Theme.Colors.accent(for: "Water"))
-                        DropletLevelView(currentMoisture: $currentMoisture, optimalMoisture: details?.parsedWaterRequirement)
-                            // Consider removing fixed height if DropletLevelView can size intrinsically
-                            // or ensure this height is sufficient for its content (incl. percentage text)
-                            // .frame(height: 150) // Adjusted based on previous iteration, review
-                    }
-                } else {
-                    PlantInfo.InfoRow(label: "Water", value: "N/A", accentColor: Theme.Colors.accent(for: "Water"))
-                }
+            VStack(alignment: .leading, spacing: Theme.Metrics.Padding.large) {
+                // Card Title
+                Text("Care")
+                    .font(Theme.Typography.title3.weight(.bold))
+                    .foregroundColor(Theme.Colors.textPrimary)
+                    .padding(.bottom, Theme.Metrics.Padding.small)
 
-                // Temperature Section
-                if let tempRange = details?.parsedTemperatureRange {
+                // Care Information using modern PlantInfoRowView
+                VStack(alignment: .leading, spacing: Theme.Metrics.Padding.medium) {
+                    if let details = details {
+                        PlantInfoRowView.sunlight(details.sunlight ?? "N/A")
+                        PlantInfoRowView.water(details.water ?? "N/A") 
+                        PlantInfoRowView.temperature(details.temperature ?? "N/A")
+                        PlantInfoRowView.humidity(details.parsedHumidity() ?? "N/A")
+                        PlantInfoRowView.soil(details.soil ?? "N/A")
+                        PlantInfoRowView.fertilizer(details.parsedFertilizer() ?? "N/A")
+                    } else {
+                        // Fallback when no details available
                     VStack(alignment: .leading, spacing: Theme.Metrics.Padding.small) {
-                        Text("Temperature")
-                            .font(Font.pressStart2P(size: 14))
-                            .foregroundColor(Theme.Colors.accent(for: "Temperature"))
-                        ThermoRangeView(optimalRange: tempRange, currentTemp: nil)
-                            // Similar to DropletLevelView, review if fixed height is best
-                            // .frame(height: 120) // Adjusted, review
+                            PlantInfoRowView.sunlight("N/A")
+                            PlantInfoRowView.water("N/A")
+                            PlantInfoRowView.temperature("N/A")
+                            PlantInfoRowView.humidity("N/A")
+                            PlantInfoRowView.soil("N/A")
+                            PlantInfoRowView.fertilizer("N/A")
+                        }
                     }
-                } else {
-                    PlantInfo.InfoRow(label: "Temperature", value: details?.temperature ?? "N/A", accentColor: Theme.Colors.accent(for: "Temperature"))
                 }
-
-                // Soil Section (using InfoRow as PixelGauge for pH is in GrowthCard)
-                VStack(alignment: .leading, spacing: Theme.Metrics.Padding.small) {
-                    Text("Soil")
-                        .font(Font.pressStart2P(size: 14))
-                        .foregroundColor(Theme.Colors.accent(for: "Soil"))
-                    PlantInfo.InfoRow(label: "Details", value: details?.soil ?? "N/A", accentColor: Theme.Colors.accent(for: "Soil"))
-                }
-
             }
-            .padding() // Outer padding for the whole ScrollView content
-            .onAppear {
-                // Initialize currentMoisture when details are available
-                currentMoisture = details?.parsedWaterRequirement ?? 0.5
-            }
-            .onChange(of: details?.latinName) { _ in // Update if details object changes
-                currentMoisture = details?.parsedWaterRequirement ?? 0.5
+            .padding(Theme.Metrics.Padding.large) // Padding for the content within the card
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity) // Ensure ScrollView takes full space
+        .background(Theme.Colors.cardBackground) // Use dark-mode-aware card background
+        .cornerRadius(Theme.Metrics.cornerRadiusLarge)
+        // Note: Shadow is handled by DexCardPager, not individual cards
+    }
+}
+
+// MARK: - SpeciesDetails Extensions for New Fields
+// Add placeholder parsing methods for new care information fields
+extension SpeciesDetails {
+    /// Parse or provide humidity information
+    func parsedHumidity() -> String? {
+        // For now, return a placeholder. In a real implementation, this would:
+        // 1. Check if there's a dedicated humidity field in the model
+        // 2. Parse humidity info from existing text fields
+        // 3. Provide intelligent defaults based on plant type
+        
+        // Placeholder logic - replace with actual field or parsing
+        if let sunlight = self.sunlight?.lowercased() {
+            if sunlight.contains("humid") || sunlight.contains("moist") {
+                return "High"
+            } else if sunlight.contains("dry") || sunlight.contains("arid") {
+                return "Low"
             }
         }
-        .background(Theme.Colors.surface) // Background for the whole card
-        .cornerRadius(Theme.Metrics.Card.cornerRadius) // Consistent corner radius
-        .shadow(color: Theme.Colors.dexShadow.opacity(Theme.Metrics.Card.shadowOpacity), 
-                radius: Theme.Metrics.Card.shadowRadius, y: 2) // Consistent shadow
-        .padding(.horizontal) // Padding for the card itself against the pager edges
+        
+        return "Moderate" // Safe default
     }
-} 
+    
+    /// Parse or provide fertilizer information  
+    func parsedFertilizer() -> String? {
+        // Placeholder logic - replace with actual field or parsing
+        // In practice, this might parse from description, soil info, or care instructions
+        
+        if let soil = self.soil?.lowercased() {
+            if soil.contains("rich") || soil.contains("fertile") {
+                return "Monthly during growing season"
+            } else if soil.contains("poor") || soil.contains("sandy") {
+                return "Bi-weekly during growing season"
+            }
+        }
+        
+        return "Monthly during growing season" // Safe default
+    }
+}
+
+#if DEBUG
+struct CareCard_Previews: PreviewProvider {
+    static var previews: some View {
+        // Preview with sample data
+        let sampleDetails = PreviewHelper.sampleSpeciesDetails
+        
+        VStack(spacing: 20) {
+            Text("Modern CareCard")
+                .font(Theme.Typography.title2)
+            
+            CareCard(details: sampleDetails)
+                .frame(height: 400)
+                .padding()
+        }
+        .background(Theme.Colors.systemGroupedBackground)
+        .previewLayout(.sizeThatFits)
+    }
+}
+#endif 

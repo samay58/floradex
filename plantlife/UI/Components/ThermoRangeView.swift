@@ -55,15 +55,15 @@ struct ThermoRangeView: View {
 
             VStack(alignment: .leading, spacing: 6) { // Adjusted spacing
                 Text("Optimal: \(optimalRange.lowerBound, specifier: "%.0f")° - \(optimalRange.upperBound, specifier: "%.0f")°")
-                    .font(Font.pressStart2P(size: 10))
+                    .font(.system(size: 10, weight: .bold, design: .monospaced))
                     .foregroundColor(.green)
                 if let temp = currentTemp {
                     Text("Current: \(temp, specifier: "%.1f")°")
-                        .font(Font.pressStart2P(size: 10))
+                        .font(.system(size: 10, weight: .bold, design: .monospaced))
                         .foregroundColor(.red)
                 }
                 Text("(\(displayRange.lowerBound, specifier: "%.0f")°-\(displayRange.upperBound, specifier: "%.0f")° scale)") // Subtler display range
-                    .font(Font.pressStart2P(size: 8))
+                    .font(.system(size: 8, weight: .bold, design: .monospaced))
                     .foregroundColor(.gray)
             }
             Spacer(minLength: 0) // Allow labels to take natural width, then push

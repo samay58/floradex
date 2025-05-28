@@ -1,7 +1,8 @@
 import Foundation
 import SwiftData
 
-actor SpeciesRepository {
+@MainActor
+final class SpeciesRepository {
     private var modelContext: ModelContext
 
     init(modelContext: ModelContext) {
@@ -9,11 +10,11 @@ actor SpeciesRepository {
     }
 
     func fetchSpeciesDetails(latinName: String) -> SpeciesDetails? {
-        let predicate = #Predicate<SpeciesDetails> { $0.latinName == latinName }
-        var descriptor = FetchDescriptor(predicate: predicate)
-        descriptor.fetchLimit = 1 // We expect at most one match due to @Attribute(.unique)
-
         do {
+            let predicate = #Predicate<SpeciesDetails> { $0.latinName == latinName }
+            var descriptor = FetchDescriptor(predicate: predicate)
+            descriptor.fetchLimit = 1 // We expect at most one match due to @Attribute(.unique)
+            
             let results = try modelContext.fetch(descriptor)
             return results.first
         } catch {

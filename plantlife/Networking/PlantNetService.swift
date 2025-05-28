@@ -1,18 +1,21 @@
 import Foundation
 import UIKit
+import CryptoKit
 
 // Shared error enum for PlantNet operations
 enum PlantNetError: Error, Equatable {
     case invalidImage
     case missingAPIKey
     case badResponse
+    case rateLimited
     case underlying(Error)
 
     static func == (lhs: PlantNetError, rhs: PlantNetError) -> Bool {
         switch (lhs, rhs) {
         case (.invalidImage, .invalidImage),
              (.missingAPIKey, .missingAPIKey),
-             (.badResponse, .badResponse):
+             (.badResponse, .badResponse),
+             (.rateLimited, .rateLimited):
             return true
         default:
             return false
@@ -95,9 +98,13 @@ enum PlantNetEndpoint: APIEndpoint {
 
 /// Wraps PlantNet API call to identify a plant from a photo.
 /// Docs: https://my-api.plantnet.org/
-final class PlantNetService {
+final class PlantNetService: @unchecked Sendable {
     static let shared = PlantNetService()
-    // Session removed, will use APIClient.shared.session
+    
+    // Request deduplication: track active requests by image hash
+    private var activeRequests: [String: Task<ClassifierResult, Error>] = [:]
+    private let requestQueue = DispatchQueue(label: "plantnet.requests", attributes: .concurrent)
+    
     private init() {}
 
     // Response structure (already defined, kept for clarity)
@@ -111,6 +118,125 @@ final class PlantNetService {
     }
 
     func classify(image: UIImage) async throws -> ClassifierResult {
+        guard let key = Secrets.plantNetAPIKey.nonEmpty else { throw PlantNetError.missingAPIKey }
+        
+        // Generate image hash for deduplication
+        let imageHash = generateImageHash(image)
+        
+        // Check if there's already a request in progress for this image
+        return try await withCheckedThrowingContinuation { continuation in
+            requestQueue.async(flags: .barrier) {
+                // If we already have an active request for this image, return that task
+                if let existingTask = self.activeRequests[imageHash] {
+                    print("[PlantNetService] Reusing existing request for image hash: \(imageHash)")
+                    Task {
+                        do {
+                            let result = try await existingTask.value
+                            continuation.resume(returning: result)
+                        } catch {
+                            continuation.resume(throwing: error)
+                        }
+                    }
+                    return
+                }
+                
+                // Create new request task with retry logic
+                let task = Task<ClassifierResult, Error> {
+                    try await self.performClassificationWithRetry(image: image, imageHash: imageHash)
+                }
+                
+                // Store the active request
+                self.activeRequests[imageHash] = task
+                print("[PlantNetService] Starting new request for image hash: \(imageHash)")
+                
+                // Execute the task
+                Task {
+                    do {
+                        let result = try await task.value
+                        continuation.resume(returning: result)
+                    } catch {
+                        continuation.resume(throwing: error)
+                    }
+                    
+                    // Clean up the request from active pool
+                    self.requestQueue.async(flags: .barrier) {
+                        self.activeRequests.removeValue(forKey: imageHash)
+                        print("[PlantNetService] Cleaned up request for image hash: \(imageHash)")
+                    }
+                }
+            }
+        }
+    }
+    
+    /// Generate a hash for image content to enable deduplication
+    private func generateImageHash(_ image: UIImage) -> String {
+        guard let imageData = image.jpegData(compressionQuality: 0.8) else {
+            return UUID().uuidString
+        }
+        let hash = SHA256.hash(data: imageData)
+        return hash.compactMap { String(format: "%02x", $0) }.joined().prefix(16).description
+    }
+    
+    /// Perform classification with exponential backoff retry logic
+    private func performClassificationWithRetry(image: UIImage, imageHash: String, maxRetries: Int = 3) async throws -> ClassifierResult {
+        var attempt = 0
+        var baseDelay: TimeInterval = 1.0
+        
+        while attempt < maxRetries {
+            attempt += 1
+            
+            do {
+                return try await performSingleClassification(image: image)
+            } catch let apiError as APIError {
+                switch apiError {
+                case .unsuccessfulResponse(let statusCode, _):
+                    if statusCode == 429 { // Rate limited
+                        if attempt < maxRetries {
+                            let delay = baseDelay * pow(2.0, Double(attempt - 1)) + Double.random(in: 0...1)
+                            print("[PlantNetService] Rate limited (attempt \(attempt)/\(maxRetries)), retrying in \(delay)s...")
+                            try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+                            baseDelay *= 2
+                            continue
+                        } else {
+                            throw PlantNetError.rateLimited
+                        }
+                    } else {
+                        // Other HTTP errors are not retryable
+                        throw PlantNetError.badResponse
+                    }
+                case .requestFailed(let underlyingError):
+                    // Network errors might be retryable
+                    if attempt < maxRetries {
+                        let delay = baseDelay * pow(2.0, Double(attempt - 1))
+                        print("[PlantNetService] Network error (attempt \(attempt)/\(maxRetries)), retrying in \(delay)s: \(underlyingError)")
+                        try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+                        continue
+                    } else {
+                        throw PlantNetError.underlying(underlyingError)
+                    }
+                default:
+                    // Other API errors are not retryable
+                    throw PlantNetError.underlying(apiError)
+                }
+            } catch {
+                // Unexpected errors
+                if attempt < maxRetries {
+                    let delay = baseDelay * pow(2.0, Double(attempt - 1))
+                    print("[PlantNetService] Unexpected error (attempt \(attempt)/\(maxRetries)), retrying in \(delay)s: \(error)")
+                    try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+                    continue
+                } else {
+                    throw PlantNetError.underlying(error)
+                }
+            }
+        }
+        
+        // This should never be reached due to throws in the loop
+        throw PlantNetError.underlying(NSError(domain: "PlantNetService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Unexpected state after retries"]))
+    }
+    
+    /// Perform a single classification request without retry logic
+    private func performSingleClassification(image: UIImage) async throws -> ClassifierResult {
         guard let key = Secrets.plantNetAPIKey.nonEmpty else { throw PlantNetError.missingAPIKey }
         // Image resizing should happen before calling this service, as per rule-007.
         // Assuming `image` is already appropriately sized.
@@ -130,12 +256,16 @@ final class PlantNetService {
                 throw PlantNetError.underlying(apiError)
             case .unsuccessfulResponse(let statusCode, _):
                 print("[PlantNetService] Unsuccessful response: \(statusCode)")
+                if statusCode == 429 {
+                    throw apiError // Let retry logic handle this
+                } else {
                 throw PlantNetError.badResponse
+                }
             case .decodingFailed(let error):
                  print("[PlantNetService] Decoding failed: \(error)")
                 throw PlantNetError.underlying(error) // Or a more specific decoding error
             case .requestFailed(let underlyingError):
-                throw PlantNetError.underlying(underlyingError)
+                throw apiError // Let retry logic handle this
             case .noData: // PlantNet should return data if successful
                 throw PlantNetError.badResponse
             }
@@ -145,6 +275,17 @@ final class PlantNetService {
                  throw PlantNetError.invalidImage
             }
             throw PlantNetError.underlying(error)
+        }
+    }
+    
+    /// Cancel all active requests (useful for cleanup)
+    func cancelAllRequests() {
+        requestQueue.async(flags: .barrier) {
+            for (hash, task) in self.activeRequests {
+                task.cancel()
+                print("[PlantNetService] Cancelled request for hash: \(hash)")
+            }
+            self.activeRequests.removeAll()
         }
     }
 }

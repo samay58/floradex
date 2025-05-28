@@ -58,7 +58,7 @@ struct DropletLevelView: View {
             )
             .overlay(
                 Text(String(format: "%.0f%%", currentMoisture * 100))
-                    .font(Font.pressStart2P(size: 10))
+                    .font(.system(size: 10, weight: .bold, design: .monospaced))
                     .foregroundColor(isDragging ? Theme.Colors.accent(for: "Water") : .white)
                     .padding(6)
                     .background(isDragging ? Color.white.opacity(0.8) : Color.black.opacity(0.3))

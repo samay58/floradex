@@ -12,7 +12,7 @@ struct PhotoCardView: View {
             .clipShape(RoundedRectangle(cornerRadius: 12))
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.accent(for: species), lineWidth: 4)
+                    .stroke(Theme.Colors.accent(for: species), lineWidth: 4)
             )
             .shadow(radius: 6)
             .padding(.bottom, 8)

@@ -213,7 +213,7 @@ struct InfoCardView: View {
                         .foregroundStyle(Theme.Colors.secondary)
                 }
                 if let conf = confidence {
-                    PixelGauge(value: conf, size: 48, foreground: Theme.Colors.accent(for: species))
+                    ModernConfidenceIndicator(confidence: conf, accentColor: Theme.Colors.accent(for: species))
                         .accessibilityLabel(Text("Confidence"))
                         .accessibilityValue(Text(String(format: "%.0f%%", conf * 100)))
                 }
@@ -294,6 +294,44 @@ struct InfoRow: View {
                     .foregroundStyle(Theme.Colors.secondary)
             }
         }
+    }
+}
+
+// MARK: - Modern Confidence Indicator
+struct ModernConfidenceIndicator: View {
+    let confidence: Double
+    let accentColor: Color
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text("Confidence")
+                    .font(Theme.Typography.caption)
+                    .foregroundColor(Theme.Colors.textSecondary)
+                Spacer()
+                Text("\(Int(confidence * 100))%")
+                    .font(Theme.Typography.caption.weight(.semibold))
+                    .foregroundColor(accentColor)
+            }
+            
+            // Modern progress bar
+            GeometryReader { geometry in
+                ZStack(alignment: .leading) {
+                    // Background track
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(Theme.Colors.systemFill)
+                        .frame(height: 4)
+                    
+                    // Progress fill
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(accentColor)
+                        .frame(width: geometry.size.width * confidence, height: 4)
+                        .animation(Theme.Animations.smooth, value: confidence)
+                }
+            }
+            .frame(height: 4)
+        }
+        .frame(width: 80)
     }
 }
 

@@ -12,7 +12,7 @@ struct ClassifierResult {
     enum Source { case local, plantNet, gpt4o, ensemble }
 }
 
-final class ClassifierService {
+final class ClassifierService: @unchecked Sendable {
     static let shared = ClassifierService()
 
     private let queue = DispatchQueue(label: "ClassifierService")

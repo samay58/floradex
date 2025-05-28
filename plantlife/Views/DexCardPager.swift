@@ -62,8 +62,8 @@ struct DexCardPager: View {
             )
         }
         .overlay(alignment: .bottom) {
-            // Page indicator
-            PixelPageDots(count: cards.count, current: currentIndex)
+            // Modern page indicator
+            ModernPageIndicator(count: cards.count, currentIndex: currentIndex)
                 .padding(.bottom, 8)
         }
         .accessibilityElement(children: .contain)
@@ -175,24 +175,7 @@ struct DexCardPager: View {
     }
 }
 
-// MARK: - PixelPageDots
-struct PixelPageDots: View {
-    let count: Int
-    let current: Int
-    
-    var body: some View {
-        HStack(spacing: 10) {
-            ForEach(0..<count, id: \.self) { index in
-                Rectangle()
-                    .frame(width: 8, height: 8)
-                    .foregroundColor(index == current ? Theme.Colors.accent(for: "dot") : Color.gray.opacity(0.5))
-            }
-        }
-        .padding(8)
-        .background(Color.black.opacity(0.2))
-        .cornerRadius(10)
-    }
-}
+// PixelPageDots removed - replaced with ModernPageIndicator
 
 #Preview {
     // Sample cards for preview

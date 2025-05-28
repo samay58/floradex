@@ -6,6 +6,7 @@ struct CameraCaptureView: View {
     @EnvironmentObject private var imageService: ImageSelectionService
     @State private var isFlashEnabled: Bool = false
     @State private var appearedAnimation: Bool = false
+    @State private var cameraController: CameraViewController?
     
     var body: some View {
         ZStack {
@@ -13,9 +14,8 @@ struct CameraCaptureView: View {
             Color.black.ignoresSafeArea()
             
             GeometryReader { geometry in
-                VStack {
-                    // Glass Toolbar for controls
-                    GlassToolbar(style: .top) {
+                VStack(spacing: 0) {
+                    // Modern toolbar with overlay buttons
                         HStack {
                             Button {
                                 let generator = UIImpactFeedbackGenerator(style: .light)
@@ -23,6 +23,8 @@ struct CameraCaptureView: View {
                                 dismiss()
                             } label: {
                                 Image(systemName: "xmark")
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundColor(.white)
                             }
                             .circularButton(
                                 size: 44,
@@ -39,6 +41,8 @@ struct CameraCaptureView: View {
                                 isFlashEnabled.toggle()
                             } label: {
                                 Image(systemName: isFlashEnabled ? "bolt.fill" : "bolt.slash")
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundColor(isFlashEnabled ? .yellow : .white)
                             }
                             .circularButton(
                                 size: 44,
@@ -48,15 +52,17 @@ struct CameraCaptureView: View {
                             )
                         }
                         .padding(.horizontal)
-                    }
+                    .padding(.top, 10)
                     
                     Spacer()
                     
-                    // Centered camera preview with GameBoy frame
+                    // Modern camera preview with clean frame
                     ZStack {
-                        GameBoyCameraFrame {
-                            // Camera controller
-                            CameraViewControllerRepresentable(flashEnabled: isFlashEnabled) { image in
+                        // Camera controller with rounded corners
+                        CameraViewControllerRepresentable(
+                            flashEnabled: isFlashEnabled,
+                            cameraController: $cameraController
+                        ) { image in
                                 let generator = UINotificationFeedbackGenerator()
                                 generator.notificationOccurred(.success)
                                 
@@ -64,23 +70,42 @@ struct CameraCaptureView: View {
                                 imageService.selectedImage = image
                                 dismiss()
                             }
-                        }
-                        .frame(maxWidth: geometry.size.width)
+                        .frame(maxWidth: geometry.size.width - 32)
+                        .frame(height: geometry.size.width - 32) // Square aspect ratio
+                        .cornerRadius(Theme.Metrics.cornerRadiusLarge)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Theme.Metrics.cornerRadiusLarge)
+                                .stroke(Color.white.opacity(0.3), lineWidth: 2)
+                        )
                         .opacity(appearedAnimation ? 1 : 0)
                         .offset(y: appearedAnimation ? 0 : 20)
                     }
                     .frame(maxHeight: .infinity)
                     
-                    // Shutter button at bottom
+                    Spacer()
+                    
+                    // Modern shutter button at bottom
                     HStack {
                         Spacer()
                         
-                        PixelButton(style: .primary, icon: "circle.fill") {
-                            // Handled in the PixelButton via haptic feedback
-                            // Camera will take photo
+                        Button {
+                            // Trigger camera capture
+                            let generator = UIImpactFeedbackGenerator(style: .heavy)
+                            generator.impactOccurred()
+                            cameraController?.capturePhoto()
+                        } label: {
+                            Image(systemName: "camera.fill")
+                                .font(.system(size: 28, weight: .bold))
+                                .foregroundColor(.white)
                         }
+                        .circularButton(
+                            size: 72,
+                            backgroundColor: Theme.Colors.primaryGreen,
+                            foregroundColor: .white,
+                            hasBorder: false
+                        )
                         .scaleEffect(appearedAnimation ? 1 : 0.95)
-                        .padding(.bottom, 30)
+                        .padding(.bottom, 40)
                         
                         Spacer()
                     }
@@ -99,12 +124,16 @@ struct CameraCaptureView: View {
 // MARK: - UIViewController Wrapper
 struct CameraViewControllerRepresentable: UIViewControllerRepresentable {
     var flashEnabled: Bool = false
+    @Binding var cameraController: CameraViewController?
     var onImageCaptured: (UIImage) -> Void
     
     func makeUIViewController(context: Context) -> CameraViewController {
         let controller = CameraViewController()
         controller.onImageCaptured = onImageCaptured
         controller.flashEnabled = flashEnabled
+        DispatchQueue.main.async {
+            self.cameraController = controller
+        }
         return controller
     }
     

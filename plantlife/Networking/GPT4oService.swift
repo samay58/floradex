@@ -107,7 +107,7 @@ enum GPT4oEndpoint: APIEndpoint {
 /// Minimal wrapper around OpenAI Vision (GPT-4o) image classification for plants.
 /// Uses Chat Completions with a system prompt instructing the model to return JSON {\"species\":<latin>,\"confidence\":<0-1>}.
 /// Note: This will incur cost. Make sure to gate by local confidence.
-final class GPT4oService {
+final class GPT4oService: Sendable {
     static let shared = GPT4oService()
     private static let session: URLSession = {
         let config = URLSessionConfiguration.default

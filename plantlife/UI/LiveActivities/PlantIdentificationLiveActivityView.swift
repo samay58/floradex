@@ -18,7 +18,7 @@ struct PlantIdentificationLiveActivityView: Widget {
             DynamicIsland {
                 // Expanded UI (when user long-presses)
                 DynamicIslandExpandedRegion(.leading) {
-                    LiveActivityImageView(spritePNGData: context.state.spritePNGData, size: 40)
+                    LiveActivityImageView(spritePNGData: context.state.spritePNGData, size: 40, phase: context.state.phase)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
                     LiveActivityConfidenceView(confidence: context.state.confidence)
@@ -27,11 +27,11 @@ struct PlantIdentificationLiveActivityView: Widget {
                     LiveActivityStatusView(phase: context.state.phase, message: context.state.currentStatusMessage, commonName: context.state.commonName, scientificName: context.state.scientificName)
                 }
             } compactLeading: {
-                LiveActivityImageView(spritePNGData: context.state.spritePNGData, size: 20)
+                LiveActivityImageView(spritePNGData: context.state.spritePNGData, size: 20, phase: context.state.phase)
             } compactTrailing: {
                 LiveActivityCompactStatus(phase: context.state.phase, confidence: context.state.confidence)
             } minimal: {
-                LiveActivityImageView(spritePNGData: context.state.spritePNGData, size: 20) // Minimal just shows a small sprite or status
+                LiveActivityImageView(spritePNGData: context.state.spritePNGData, size: 20, phase: context.state.phase) // Minimal just shows a small sprite or status
             }
             .widgetURL(URL(string: "plantlife://identification/\(context.attributes.initialPlaceholderMessage.toSlug())")) // Example URL
         }
@@ -46,18 +46,19 @@ struct LockScreenLiveActivityView: View {
     var body: some View {
         VStack(alignment: .leading) {
             HStack {
-                LiveActivityImageView(spritePNGData: context.state.spritePNGData, size: 50)
+                LiveActivityImageView(spritePNGData: context.state.spritePNGData, size: 50, phase: context.state.phase)
                 VStack(alignment: .leading) {
                     Text(context.state.commonName ?? context.state.scientificName ?? context.attributes.initialPlaceholderMessage)
-                        .font(.headline)
+                        .font(Theme.Typography.headline)
                     Text(context.state.currentStatusMessage)
-                        .font(.subheadline)
+                        .font(Theme.Typography.subheadline)
                 }
                 Spacer()
                 LiveActivityConfidenceView(confidence: context.state.confidence, showPercentageSign: true)
             }
             ProgressView(value: phaseToProgress(context.state.phase))
                 .progressViewStyle(.linear)
+                .tint(Theme.Colors.primaryGreen)
         }
         .padding()
         .activityBackgroundTint(Color.black.opacity(0.3))
@@ -79,6 +80,7 @@ struct LockScreenLiveActivityView: View {
 struct LiveActivityImageView: View {
     let spritePNGData: Data?
     let size: CGFloat
+    let phase: IdentificationPhase
 
     var body: some View {
         if let data = spritePNGData, let uiImage = UIImage(data: data) {
@@ -88,12 +90,22 @@ struct LiveActivityImageView: View {
                 .frame(width: size, height: size)
                 .clipShape(Circle())
         } else {
-            // Placeholder: Radar sweep or generic icon
-            Image(systemName: "leaf.circle") // Placeholder
-                .resizable()
-                .scaledToFit()
-                .frame(width: size, height: size)
-                .foregroundColor(.green)
+            // Placeholder: Animated or static based on phase
+            if phase == .searching || phase == .analyzing {
+                Image(systemName: "arrow.triangle.2.circlepath.circle") // Animated placeholder
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: size, height: size)
+                    .foregroundColor(Theme.Colors.primaryGreen)
+                    .rotationEffect(.degrees(0)) // Needs explicit animation modifier to work
+                    // .animation(Animation.linear(duration: 1.5).repeatForever(autoreverses: false), value: phase) // Example animation trigger
+            } else {
+                Image(systemName: "leaf.circle") // Static placeholder for other states
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: size, height: size)
+                    .foregroundColor(Theme.Colors.primaryGreen)
+            }
         }
     }
 }
@@ -152,10 +164,12 @@ struct LiveActivityCompactStatus: View {
             if phase == .done, let conf = confidence {
                 LiveActivityConfidenceView(confidence: conf, showPercentageSign: true)
             } else if phase == .searching || phase == .analyzing {
-                Image(systemName: "magnifyingglass") // Represents searching/analyzing
+                Image(systemName: "arrow.triangle.2.circlepath.circle") // Animated placeholder for compact
+                    .foregroundColor(Theme.Colors.primaryGreen)
                     .transition(.opacity)
             } else if phase == .processing || phase == .almostDone {
-                 Image(systemName: "gearshape.arrow.trianglebadge.exclamationmark") // Represents processing
+                 Image(systemName: "gearshape.fill") // Modern gear icon
+                    .foregroundColor(Theme.Colors.primaryGreen)
                     .transition(.opacity)
             } else {
                 Text(phase.rawValue.prefix(1).uppercased()) // e.g., "S", "A", "D"

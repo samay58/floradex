@@ -2,7 +2,7 @@ import Foundation
 import SwiftData
 
 @Model
-final class SpeciesDetails: Identifiable, Codable {
+final class SpeciesDetails: Identifiable, Codable, Sendable {
     @Attribute(.unique) var latinName: String // latinName acts as ID
     var commonName: String?
     var summary: String?

@@ -2,21 +2,61 @@ import SwiftUI
 
 /// Central theme definition for the application
 struct Theme {
-    // MARK: - Colors
+    // MARK: - Colors (Updated for Modern Design)
     struct Colors {
-        // Base Colors
-        static let primary = Color.primary        // Label color adapts light/dark
-        static let secondary = Color.secondary    // Secondary label
-        static let background = Color(.systemBackground) // Main surface
+        // New Primary Palette
+        static let primaryGreen = Color(hex: "#2EB875") // Vibrant green accent
+        static let backgroundLight = Color(hex: "#F7F7F8") // Off-white/Light Gray - will be overridden by asset
+        static let surfaceLight = Color.white // For cards and surfaces - will be overridden by asset
+
+        static let textPrimary = Color.primary // Use system primary for automatic dark mode
+        static let textSecondary = Color.secondary // Use system secondary for automatic dark mode  
+        static let textDisabled = Color.primary.opacity(0.38)
+
+        static let iconPrimary = Color.primary.opacity(0.70)
+        static let iconSecondary = Color.primary.opacity(0.50)
+
+        // System-adaptive colors (automatically handle dark mode)
+        static let systemBackground = Color(.systemBackground)
+        static let systemGroupedBackground = Color(.systemGroupedBackground)
+        static let systemFill = Color(.systemFill)
+        static let systemSecondaryFill = Color(.secondarySystemFill)
+        
+        // Asset catalog colors (automatically handle dark mode)
+        static let backgroundFromAsset = Color("BackgroundColor")
+        static let accentFromAsset = Color("AccentColor")
+
+        // Semantic colors that adapt to dark mode
+        static let cardBackground = Color(.secondarySystemBackground)
+        static let separatorColor = Color(.separator)
+        static let labelColor = Color(.label)
+        static let secondaryLabelColor = Color(.secondaryLabel)
+        
+        // Semantic Card Background Colors for Plant Types
+        static let succulentCardBackground = Color(hex: "#E0F2F7")
+        static let flowerCardBackground = Color(hex: "#FFF0F5")
+        static let treeCardBackground = Color(hex: "#F0FFF0")
+        
+        // Enhanced icon colors
+        static let iconDisabled = Color.primary.opacity(0.3)
+
+        // Legacy aliases for backward compatibility during transition
+        @available(*, deprecated, message: "Use textPrimary instead")
+        static let primary = Color.primary
+        @available(*, deprecated, message: "Use textSecondary instead") 
+        static let secondary = Color.secondary
+        @available(*, deprecated, message: "Use systemBackground instead")
+        static let background = Color(.systemBackground)
+        @available(*, deprecated, message: "Use cardBackground instead")
         static let surface = Color(.secondarySystemBackground)
         
-        // Additional Text / Surface aliases for gauges & components
-        static let text = primary
-        static let textSecondary = secondary
-        static let textDisabled = Color.gray.opacity(0.5)
-        static let surfaceVariant = surface
+        // Additional Text / Surface aliases for backward compatibility
+        @available(*, deprecated, message: "Use textPrimary instead")
+        static let text = textPrimary
+        @available(*, deprecated, message: "Use cardBackground instead")
+        static let surfaceVariant = cardBackground
         
-        // Plant Type Colors
+        // Plant Type Colors (retained but may be simplified in new design)
         static let flower = Color.pink
         static let tree = Color.green
         static let succulent = Color.teal
@@ -25,17 +65,24 @@ struct Theme {
         static let vine = Color.indigo
         static let grass = Color.lime
         
-        // Floradex Specific Colors
-        static let dexBackground = Color(.systemGroupedBackground)
-        static let dexCardSurface = Color(.secondarySystemBackground)
-        static let dexCardSurfaceDark = Color(.tertiarySystemBackground)
-        static let dexShadow = Color.black.opacity(0.08)
+        // Floradex Specific Colors (Updated for dark mode)
+        static let dexBackground = systemBackground // Use system background instead of custom
+        static let dexCardSurface = cardBackground // Use semantic card background
+        static let dexCardSurfaceDark = Color(.tertiarySystemBackground) // Keep for specific dark needs
+        static let dexShadow = Color.primary.opacity(0.08) // Shadow that adapts to dark mode
         
         /// Return appropriate accent color for a plant species
         /// - Parameter species: The latin name of the species or nil
         /// - Returns: A Color appropriate for the plant type
         static func accent(for species: String?) -> Color {
-            guard let species = species?.lowercased() else { return primary }
+            // For the new design, consistent accent (primaryGreen) might be better
+            // than per-species colors, unless specified by detailed designs.
+            // For now, defaulting to primaryGreen for consistency
+            return primaryGreen
+            
+            // Legacy per-species logic preserved but commented for potential future use
+            /*
+            guard let species = species?.lowercased() else { return primaryGreen }
             
             // Map species family/genus to appropriate colors
             if species.contains("rosa") || species.contains("flower") || species.contains("lili") {
@@ -54,62 +101,80 @@ struct Theme {
                 return grass
             }
             
-            return primary
+            return primaryGreen
+            */
         }
     }
     
-    // MARK: - Typography
+    // MARK: - Typography (Updated to System Fonts)
     struct Typography {
-        // Title Styles
-        static let largeTitle = Font.largeTitle.weight(.bold)
-        static let title = Font.title.weight(.semibold)
-        static let title2 = Font.title2.weight(.semibold)
-        static let title3 = Font.title3.weight(.semibold)
+        // Title Styles - Using system fonts
+        static let largeTitle = Font.system(.largeTitle, design: .default).weight(.bold)
+        static let title = Font.system(.title, design: .default).weight(.semibold)
+        static let title2 = Font.system(.title2, design: .default).weight(.semibold)
+        static let title3 = Font.system(.title3, design: .default).weight(.semibold)
         
-        // Body Styles
-        static let body = Font.jetBrainsMono(size: 16)
-        static let bodyMedium = Font.jetBrainsMono(size: 16).weight(.medium)
-        static let bodyBold = Font.jetBrainsMono(size: 16).weight(.bold)
+        static let headline = Font.system(.headline, design: .default).weight(.semibold)
+        static let body = Font.system(.body, design: .default)
+        static let bodyMedium = Font.system(.body, design: .default).weight(.medium)
+        static let bodyBold = Font.system(.body, design: .default).weight(.bold)
         
-        // Caption Styles
-        static let caption = Font.jetBrainsMono(size: 12)
-        static let captionMedium = Font.jetBrainsMono(size: 12).weight(.medium)
+        static let callout = Font.system(.callout, design: .default)
+        static let subheadline = Font.system(.subheadline, design: .default)
+
+        static let caption = Font.system(.caption, design: .default)
+        static let captionMedium = Font.system(.caption, design: .default).weight(.medium)
+        static let caption2 = Font.system(.caption2, design: .default)
         
         // Button Styles
-        static let button = Font.jetBrainsMono(size: 16).weight(.medium)
+        static let button = Font.system(.body, design: .default).weight(.semibold)
+        
+        // Legacy font aliases removed - use system fonts from Typography
     }
     
-    // MARK: - Animations
+    // MARK: - Animations (Updated with faster defaults)
     struct Animations {
-        // Standard Springs
-        static let snappy = Animation.spring(response: 0.3, dampingFraction: 0.7, blendDuration: 0.3)
-        static let smooth = Animation.spring(response: 0.6, dampingFraction: 0.8, blendDuration: 0.5)
-        static let bouncy = Animation.spring(response: 0.5, dampingFraction: 0.6, blendDuration: 0.3)
+        static let snappy = Animation.spring(response: 0.35, dampingFraction: 0.75, blendDuration: 0)
+        static let smooth = Animation.spring(response: 0.5, dampingFraction: 0.8, blendDuration: 0)
+        static let bouncy = Animation.spring(response: 0.5, dampingFraction: 0.65, blendDuration: 0)
         
-        // Delays
-        static func staggered(index: Int, baseDelay: Double = 0.1) -> Animation {
+        static func staggered(index: Int, baseDelay: Double = 0.05) -> Animation { // Faster base delay
             return smooth.delay(baseDelay * Double(index))
         }
 
-        // Floradex Specific Animations
+        // Legacy animations for backward compatibility
+        @available(*, deprecated, message: "Use snappy, smooth, or bouncy instead")
         static let floradexDefaultAnimation: Animation = .easeInOut
+        @available(*, deprecated, message: "Use snappy instead")
         static let floradexFastAnimation: Animation = .easeInOut(duration: 0.2)
     }
     
-    // MARK: - Metrics
+    // MARK: - Metrics (Updated for Modern Design)
     struct Metrics {
+        // Corner Radii
+        static let cornerRadiusSmall: CGFloat = 8
+        static let cornerRadiusMedium: CGFloat = 12 // Common for buttons, inputs
+        static let cornerRadiusLarge: CGFloat = 16 // Common for cards
+
+        // Icon Sizes
+        static let iconSizeSmall: CGFloat = 20
+        static let iconSizeMedium: CGFloat = 24
+        static let iconSizeLarge: CGFloat = 28
+
+        // Legacy aliases
+        @available(*, deprecated, message: "Use cornerRadiusMedium instead")
         static let cornerRadius: CGFloat = 12
+        @available(*, deprecated, message: "Use iconSizeMedium instead")
         static let iconSize: CGFloat = 24
         static let buttonSize: CGFloat = 52
-        
-        // Floradex Specific Corner Radii
-        static let floradexLargeCardRadius: CGFloat = 32.0
-        static let floradexSmallCardRadius: CGFloat = 20.0
 
         struct Padding {
-            static let small: CGFloat = 8
+            static let micro: CGFloat = 4
+            static let extraSmall: CGFloat = 8
+            static let small: CGFloat = 12
             static let medium: CGFloat = 16
             static let large: CGFloat = 24
+            static let extraLarge: CGFloat = 32
         }
         
         struct Card {
@@ -117,17 +182,23 @@ struct Theme {
             static let shadowRadius: CGFloat = 10
             static let shadowOpacity: Double = 0.1
         }
+        
+        // Legacy Floradex specific metrics (may be consolidated)
+        @available(*, deprecated, message: "Use cornerRadiusLarge instead")
+        static let floradexLargeCardRadius: CGFloat = 32.0
+        @available(*, deprecated, message: "Use cornerRadiusMedium instead")
+        static let floradexSmallCardRadius: CGFloat = 20.0
     }
 }
 
 // MARK: - View Extensions
 extension View {
-    /// Apply the theme to a view
+    /// Apply the modern theme to a view
     /// - Returns: A view with theme styles applied
     func themed() -> some View {
         self
             .font(Theme.Typography.body)
-            .foregroundStyle(Theme.Colors.primary)
+            .foregroundStyle(Theme.Colors.textPrimary)
     }
     
     /// Apply a theme animation
@@ -136,6 +207,20 @@ extension View {
     func themeAnimation(_ animation: Animation) -> some View {
         self.animation(animation, value: UUID())
     }
+    
+    /// Conditionally apply a modifier
+    /// - Parameters:
+    ///   - condition: The condition to check
+    ///   - transform: The transform to apply if condition is true
+    /// - Returns: The view with or without the transform applied
+    @ViewBuilder
+    func `if`<Content: View>(_ condition: Bool, transform: (Self) -> Content) -> some View {
+        if condition {
+            transform(self)
+        } else {
+            self
+        }
+    }
 }
 
 // Add a convenient Color extension for lime color (missing in SwiftUI)
@@ -143,7 +228,7 @@ extension Color {
     static let lime = Color(red: 0.7, green: 0.9, blue: 0.3)
 }
 
-// Helper for hex color initialization (optional, can be moved to Color extension)
+// Helper for hex color initialization
 extension Color {
     init(hex: String) {
         let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)

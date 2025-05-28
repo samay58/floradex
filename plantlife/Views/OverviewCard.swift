@@ -16,7 +16,7 @@ struct OverviewCard: View, DexDetailCard {
     @State private var scrollOffset: CGFloat = 0 // To track scroll position for sticky headers
     
     var accentColor: Color {
-        Theme.Colors.accent(for: details?.latinName ?? "default")
+        Theme.Colors.primaryGreen // Use consistent primary green
     }
 
     private var wikipediaURL: URL? {
@@ -37,36 +37,49 @@ struct OverviewCard: View, DexDetailCard {
                 .frame(height: 0) // Important: make it take no space
                 
                 LazyVStack(alignment: .leading, spacing: Theme.Metrics.Padding.large, pinnedViews: [.sectionHeaders]) {
-                    // Add a main title for OverviewCard
+                    // Main title for OverviewCard
                     Text("Overview")
-                        .font(Font.pressStart2P(size: 16))
+                        .font(Theme.Typography.title3.weight(.bold))
+                        .foregroundColor(Theme.Colors.textPrimary)
                         .padding(.bottom, Theme.Metrics.Padding.small)
-                        .frame(maxWidth: .infinity, alignment: .leading) // Ensure it aligns with sections
+                        .frame(maxWidth: .infinity, alignment: .leading)
 
                     Section {
                         Text(details?.summary ?? "No summary available.")
+                            .font(Theme.Typography.body)
+                            .foregroundColor(Theme.Colors.textPrimary)
                             .padding(.bottom)
                     } header: {
-                        StickyHeaderView(title: "Summary", currentOffset: scrollOffset, font: Font.pressStart2P(size: 14))
+                        StickyHeaderView(title: "Summary", currentOffset: scrollOffset, font: Theme.Typography.headline)
                     }
                     
                     if let funFacts = details?.funFacts, !funFacts.isEmpty {
                         Section {
                             ForEach(funFacts, id: \.self) { fact in
-                                Label(fact, systemImage: "sparkle")
+                                Label {
+                                    Text(fact)
+                                        .font(Theme.Typography.body)
+                                        .foregroundColor(Theme.Colors.textPrimary)
+                                } icon: {
+                                    Image(systemName: "sparkle")
+                                        .foregroundColor(Theme.Colors.primaryGreen)
+                                }
+                                .padding(.vertical, Theme.Metrics.Padding.extraSmall)
                             }
                             .padding(.bottom)
                         } header: {
-                            StickyHeaderView(title: "Fun Facts", currentOffset: scrollOffset, font: Font.pressStart2P(size: 14))
+                            StickyHeaderView(title: "Fun Facts", currentOffset: scrollOffset, font: Theme.Typography.headline)
                         }
                     }
                     
                     if let notes = entry.notes, !notes.isEmpty {
                         Section {
                             Text(notes)
+                                .font(Theme.Typography.body)
+                                .foregroundColor(Theme.Colors.textPrimary)
                                 .padding(.bottom)
                         } header: {
-                            StickyHeaderView(title: "My Notes", currentOffset: scrollOffset, font: Font.pressStart2P(size: 14))
+                            StickyHeaderView(title: "My Notes", currentOffset: scrollOffset, font: Theme.Typography.headline)
                                 .padding(.top) // Add padding if sections are too close
                         }
                     }
@@ -74,39 +87,36 @@ struct OverviewCard: View, DexDetailCard {
                     if let url = wikipediaURL {
                         Section {
                             Link("View on Wikipedia", destination: url)
-                                .font(.callout)
+                                .font(Theme.Typography.callout)
                                 .foregroundColor(accentColor)
                                 .padding(.bottom) // Ensure content pushes header if it's last
                         } header: {
-                            StickyHeaderView(title: "Learn More", currentOffset: scrollOffset, font: Font.pressStart2P(size: 14))
+                            StickyHeaderView(title: "Learn More", currentOffset: scrollOffset, font: Theme.Typography.headline)
                                 .padding(.top)
                         }
                     }
                 }
-                .padding()
+                .padding(Theme.Metrics.Padding.large)
             }
         }
         .coordinateSpace(name: "overviewScroll") // Name the coordinate space for the preference key
         .onPreferenceChange(ScrollOffsetPreferenceKey.self) { value in
             self.scrollOffset = value
         }
-        .background(Theme.Colors.surface)
-        .shadow(color: Theme.Colors.dexShadow.opacity(Theme.Metrics.Card.shadowOpacity), 
-                radius: Theme.Metrics.Card.shadowRadius, y: 2)
-        .cornerRadius(Theme.Metrics.Card.cornerRadius)
-        .padding(.horizontal)
+        .frame(maxWidth: .infinity, maxHeight: .infinity) // Ensure ScrollView takes full space
+        .background(Theme.Colors.cardBackground) // Use dark-mode-aware card background
+        .cornerRadius(Theme.Metrics.cornerRadiusLarge)
+        // Note: Shadow is handled by DexCardPager, not individual cards
     }
 }
 
-// Reusable Sticky Header View
+// Reusable Sticky Header View with Modern Styling
 struct StickyHeaderView: View {
     let title: String
     let currentOffset: CGFloat
     let font: Font
     
     // Calculate how much the header should be offset to appear sticky
-    // This needs to be tuned. If currentOffset is negative (scrolling up),
-    // we want to offset the header by -currentOffset to keep it at the top.
     private var stickyOffset: CGFloat {
         // When currentOffset is 0 or positive (at top or bounced down), no offset needed.
         // When currentOffset is negative (scrolled up), header moves up by that amount to stick.
@@ -116,10 +126,32 @@ struct StickyHeaderView: View {
     var body: some View {
         Text(title)
             .font(font)
-            .padding(.vertical, 8)
+            .foregroundColor(Theme.Colors.textPrimary)
+            .padding(.vertical, Theme.Metrics.Padding.extraSmall)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(.ultraThinMaterial) // As per plan
+            .background(Theme.Colors.cardBackground.opacity(0.95)) // Use dark-mode-aware background with opacity for sticky effect
             .offset(y: stickyOffset) // Apply sticky offset
             .zIndex(1) // Ensure header is above content during scroll
     }
 } 
+
+#if DEBUG
+struct OverviewCard_Previews: PreviewProvider {
+    static var previews: some View {
+        // Preview with sample data
+        let sampleEntry = PreviewHelper.sampleDexEntry
+        let sampleDetails = PreviewHelper.sampleSpeciesDetails
+        
+        VStack(spacing: 20) {
+            Text("Modern OverviewCard")
+                .font(Theme.Typography.title2)
+            
+            OverviewCard(entry: sampleEntry, details: sampleDetails)
+                .frame(height: 500)
+                .padding()
+        }
+        .background(Theme.Colors.systemGroupedBackground)
+        .previewLayout(.sizeThatFits)
+    }
+}
+#endif 

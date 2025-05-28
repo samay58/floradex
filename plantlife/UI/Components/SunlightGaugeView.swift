@@ -68,7 +68,7 @@ struct SunlightGaugeView: View {
                             .scaleEffect(isHighlighted(level) ? 1.1 : 1.0)
                         
                         Text(level.rawValue.split(separator: " ").first ?? "")
-                            .font(Font.pressStart2P(size: 8))
+                            .font(.system(size: 8, weight: .bold, design: .monospaced))
                             .foregroundColor(Theme.Colors.textSecondary)
                             .lineLimit(1)
                     }

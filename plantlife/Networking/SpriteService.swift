@@ -44,8 +44,9 @@ enum SpriteEndpoint: APIEndpoint {
                 "prompt": prompt,
                 "n": 1,
                 "size": "auto",
-                "quality": "low",
-                "background": "transparent"
+                "quality": "medium",
+                "background": "transparent",
+                "output_format": "png"
             ]
         }
     }
@@ -56,7 +57,7 @@ enum SpriteEndpoint: APIEndpoint {
     var timeout: TimeInterval? { 300 }
 }
 
-final class SpriteService {
+final class SpriteService: Sendable {
     static let shared = SpriteService()
     private init() {}
 
@@ -80,56 +81,69 @@ final class SpriteService {
     }
 
     func generateSprite(forCommonName commonName: String, latinName: String) async throws -> Data {
+        print("[SpriteService] Starting sprite generation for: \(commonName) (\(latinName))")
+        
         guard let apiKey = Secrets.openAIApiKey.nonEmpty else {
+            print("[SpriteService] Error: Missing OpenAI API key")
             throw SpriteError.missingKey
         }
 
-        // Construct the prompt
-        let prompt = "8-bit GameBoy-style sprite of the plant \(commonName) (\(latinName)). Use a limited retro palette, transparent background. Pixel art style."
+        // Construct the prompt for gpt-image-1
+        let prompt = "Create a simple pixel art sprite of a \(commonName) plant (\(latinName)). The sprite should be in a retro 8-bit video game style with a limited color palette, centered in the frame, and suitable for a plant collection game. Make it cute and iconic."
 
         let endpoint = SpriteEndpoint.generate(prompt: prompt, apiKey: apiKey)
 
         do {
             let response: OpenAIImageGenerationResponse = try await APIClient.shared.request(endpoint: endpoint)
+            print("[SpriteService] Received response from OpenAI API. Data count: \(response.data.count)")
             
             guard let firstDatum = response.data.first else {
+                print("[SpriteService] No data in response from OpenAI API")
                 throw SpriteError.noSpriteURLFound // Or badResponseFormat
             }
 
-            // Prefer URL and download, but b64_json is an option if response_format is changed
-            if let spriteUrlString = firstDatum.url?.absoluteString,
-               let spriteUrl = URL(string: spriteUrlString) {
-                
-                // Download the image data
-                let (imageData, _) = try await URLSession.shared.data(from: spriteUrl)
-                
-                // Process and resize the image (e.g., to 64x64 PNG)
-                guard let image = UIImage(data: imageData),
-                      let resizedImage = UIImage.ImageProcessing.resized(image, maxSide: 64),
-                      let pngData = resizedImage.pngData() else {
-                    throw SpriteError.imageProcessingFailed
-                }
-                return pngData
-                
-            } else if let b64Json = firstDatum.b64_json,
-                      let decodedData = Data(base64Encoded: b64Json) {
-                // Process and resize the image if b64_json is used
-                guard let image = UIImage(data: decodedData),
-                      let resizedImage = UIImage.ImageProcessing.resized(image, maxSide: 64),
-                      let pngData = resizedImage.pngData() else {
-                    throw SpriteError.imageProcessingFailed
-                }
-                return pngData
-            } else {
-                throw SpriteError.noSpriteURLFound
+            // gpt-image-1 always returns base64-encoded images
+            guard let b64Json = firstDatum.b64_json,
+                  let decodedData = Data(base64Encoded: b64Json) else {
+                print("[SpriteService] No base64 data in response from OpenAI API")
+                throw SpriteError.badResponseFormat
             }
+            
+            print("[SpriteService] Received base64 image data. Decoded size: \(decodedData.count) bytes")
+            
+            // Process and resize the image
+            guard let image = UIImage(data: decodedData) else {
+                print("[SpriteService] Failed to create UIImage from decoded base64 data")
+                throw SpriteError.imageProcessingFailed
+            }
+            print("[SpriteService] Created UIImage from base64 data. Original dimensions: \(image.size.width)x\(image.size.height)")
+            
+            guard let resizedImage = UIImage.ImageProcessing.resized(image, maxSide: 64) else {
+                print("[SpriteService] Failed to resize image to 64x64")
+                throw SpriteError.imageProcessingFailed
+            }
+            print("[SpriteService] Resized image to: \(resizedImage.size.width)x\(resizedImage.size.height)")
+            
+            guard let pngData = resizedImage.pngData() else {
+                print("[SpriteService] Failed to convert resized image to PNG data")
+                throw SpriteError.imageProcessingFailed
+            }
+            
+            // Log successful sprite generation
+            if let verifyImage = UIImage(data: pngData) {
+                print("[SpriteService] Successfully generated sprite PNG data. Size: \(pngData.count) bytes. Dimensions: \(verifyImage.size.width)x\(verifyImage.size.height)")
+            } else {
+                print("[SpriteService] Successfully generated sprite PNG data. Size: \(pngData.count) bytes. Could not create UIImage from data for dimension check.")
+            }
+            
+            return pngData
         } catch let apiError as APIError {
-            print("Sprite generation API request failed: \(apiError)")
+            print("[SpriteService] Sprite generation API request failed: \(apiError). Endpoint: \(endpoint.path), Params: \(String(describing: endpoint.parameters))")
             throw SpriteError.apiRequestFailed(apiError)
         } catch let spriteError as SpriteError {
             throw spriteError // Re-throw specific sprite errors
         } catch {
-            print("An unexpected error occurred during sprite generation: \(error)")
+            print("[SpriteService] An unexpected error occurred during sprite generation: \(error)")
             throw SpriteError.apiRequestFailed(error) // General catch-all
         }
     }

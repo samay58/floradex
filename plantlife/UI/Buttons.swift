@@ -1,10 +1,10 @@
 import SwiftUI
 
-/// A collection of button styles for the app
+/// A collection of modern button styles for the app
 struct Buttons {
-    // MARK: - Button Styles
+    // MARK: - Modern Button Styles
     
-    /// A floating circular button style
+    /// A floating circular button style for action buttons
     struct CircularButtonStyle: ButtonStyle {
         let size: CGFloat
         let backgroundColor: Color
@@ -13,8 +13,8 @@ struct Buttons {
         
         init(
             size: CGFloat = 56,
-            backgroundColor: Color = .white,
-            foregroundColor: Color = .black,
+            backgroundColor: Color = Theme.Colors.surfaceLight,
+            foregroundColor: Color = Theme.Colors.textPrimary,
             hasBorder: Bool = true
         ) {
             self.size = size
@@ -32,50 +32,82 @@ struct Buttons {
                     Circle()
                         .fill(backgroundColor)
                         .opacity(configuration.isPressed ? 0.8 : 1.0)
-                        .shadow(color: .black.opacity(0.15), radius: 4, x: 0, y: 2)
+                        .shadow(color: Theme.Colors.dexShadow, radius: 4, x: 0, y: 2)
                 )
                 .overlay(
                     Group {
                         if hasBorder {
                             Circle()
-                                .stroke(backgroundColor, lineWidth: 3)
-                                .scaleEffect(1.15)
+                                .stroke(backgroundColor, lineWidth: 2)
+                                .scaleEffect(1.1)
                         }
                     }
                 )
                 .scaleEffect(configuration.isPressed ? 0.95 : 1.0)
-                .animation(.spring(response: 0.3, dampingFraction: 0.6), value: configuration.isPressed)
+                .animation(Theme.Animations.snappy, value: configuration.isPressed)
         }
     }
     
-    /// A pill-shaped button style
+    /// Modern pill-shaped button style with full width option
     struct PillButtonStyle: ButtonStyle {
         let backgroundColor: Color
         let foregroundColor: Color
+        let fullWidth: Bool
         
-        init(backgroundColor: Color = Theme.Colors.primary, foregroundColor: Color = .white) {
+        init(
+            backgroundColor: Color = Theme.Colors.primaryGreen, 
+            foregroundColor: Color = .white,
+            fullWidth: Bool = false
+        ) {
             self.backgroundColor = backgroundColor
             self.foregroundColor = foregroundColor
+            self.fullWidth = fullWidth
         }
         
         func makeBody(configuration: Configuration) -> some View {
             configuration.label
                 .font(Theme.Typography.button)
                 .foregroundStyle(foregroundColor)
-                .padding(.vertical, 12)
-                .padding(.horizontal, 20)
+                .padding(.vertical, Theme.Metrics.Padding.small)
+                .padding(.horizontal, Theme.Metrics.Padding.medium)
+                .if(fullWidth) { view in
+                    view.frame(maxWidth: .infinity)
+                }
                 .background(
                     Capsule()
                         .fill(backgroundColor)
                         .opacity(configuration.isPressed ? 0.8 : 1.0)
-                        .shadow(color: backgroundColor.opacity(0.3), radius: 4, x: 0, y: 2)
                 )
                 .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
-                .animation(.spring(response: 0.3, dampingFraction: 0.6), value: configuration.isPressed)
+                .animation(Theme.Animations.snappy, value: configuration.isPressed)
         }
     }
     
-    /// A glass button style
+    /// Primary action button style for main CTAs
+    struct PrimaryActionButtonStyle: ButtonStyle {
+        let isEnabled: Bool
+        
+        init(isEnabled: Bool = true) {
+            self.isEnabled = isEnabled
+        }
+        
+        func makeBody(configuration: Configuration) -> some View {
+            configuration.label
+                .font(Theme.Typography.button)
+                .foregroundStyle(.white)
+                .padding(.vertical, Theme.Metrics.Padding.small + 2) // Slightly larger for primary actions
+                .frame(maxWidth: .infinity)
+                .background(
+                    RoundedRectangle(cornerRadius: Theme.Metrics.cornerRadiusLarge)
+                        .fill(isEnabled ? Theme.Colors.primaryGreen : Theme.Colors.iconSecondary)
+                        .opacity(configuration.isPressed ? 0.8 : 1.0)
+                )
+                .scaleEffect(configuration.isPressed && isEnabled ? 0.98 : 1.0)
+                .animation(Theme.Animations.snappy, value: configuration.isPressed)
+        }
+    }
+    
+    /// Modern glass button style with material background
     struct GlassButtonStyle: ButtonStyle {
         let tint: Color?
         
@@ -86,15 +118,15 @@ struct Buttons {
         func makeBody(configuration: Configuration) -> some View {
             configuration.label
                 .font(Theme.Typography.button)
-                .padding(.vertical, 12)
-                .padding(.horizontal, 20)
+                .padding(.vertical, Theme.Metrics.Padding.small)
+                .padding(.horizontal, Theme.Metrics.Padding.medium)
                 .background {
                     Group {
                         if let tint = tint {
                             ZStack {
                                 Rectangle()
                                     .fill(Material.regularMaterial)
-                                    .opacity(0.7)
+                                    .opacity(0.9)
                                 Rectangle()
                                     .fill(tint)
                                     .opacity(0.1)
@@ -102,15 +134,15 @@ struct Buttons {
                         } else {
                             Rectangle()
                                 .fill(Material.regularMaterial)
-                                .opacity(0.7)
+                                .opacity(0.9)
                         }
                     }
                     .opacity(configuration.isPressed ? 0.7 : 1.0)
                 }
-                .clipShape(RoundedRectangle(cornerRadius: Theme.Metrics.cornerRadius))
-                .shadow(color: .black.opacity(0.1), radius: 3, x: 0, y: 1)
+                .clipShape(RoundedRectangle(cornerRadius: Theme.Metrics.cornerRadiusMedium))
+                .shadow(color: Theme.Colors.dexShadow, radius: 3, x: 0, y: 1)
                 .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
-                .animation(.spring(response: 0.3, dampingFraction: 0.6), value: configuration.isPressed)
+                .animation(Theme.Animations.snappy, value: configuration.isPressed)
         }
     }
 }
@@ -118,16 +150,10 @@ struct Buttons {
 // MARK: - View Extensions
 extension View {
     /// Apply a circular button style to a button
-    /// - Parameters:
-    ///   - size: The diameter of the button
-    ///   - backgroundColor: The background color of the button
-    ///   - foregroundColor: The foreground color of the button
-    ///   - hasBorder: Whether the button has a border
-    /// - Returns: A button with the circular style applied
     func circularButton(
         size: CGFloat = 56,
-        backgroundColor: Color = .white,
-        foregroundColor: Color = .black,
+        backgroundColor: Color = Theme.Colors.surfaceLight,
+        foregroundColor: Color = Theme.Colors.textPrimary,
         hasBorder: Bool = true
     ) -> some View {
         self.buttonStyle(
@@ -140,120 +166,73 @@ extension View {
         )
     }
     
-    /// Apply a pill button style to a button
-    /// - Parameters:
-    ///   - backgroundColor: The background color of the button
-    ///   - foregroundColor: The foreground color of the button
-    /// - Returns: A button with the pill style applied
-    func pillButton(backgroundColor: Color = Theme.Colors.primary, foregroundColor: Color = .white) -> some View {
-        self.buttonStyle(Buttons.PillButtonStyle(backgroundColor: backgroundColor, foregroundColor: foregroundColor))
+    /// Apply a modern pill button style to a button
+    func pillButton(
+        backgroundColor: Color = Theme.Colors.primaryGreen, 
+        foregroundColor: Color = .white,
+        fullWidth: Bool = false
+    ) -> some View {
+        self.buttonStyle(
+            Buttons.PillButtonStyle(
+                backgroundColor: backgroundColor, 
+                foregroundColor: foregroundColor,
+                fullWidth: fullWidth
+            )
+        )
+    }
+    
+    /// Apply primary action button style (full width, prominent)
+    func primaryActionButton(isEnabled: Bool = true) -> some View {
+        self.buttonStyle(Buttons.PrimaryActionButtonStyle(isEnabled: isEnabled))
     }
     
     /// Apply a glass button style to a button
-    /// - Parameter tint: An optional tint color for the button
-    /// - Returns: A button with the glass style applied
     func glassButton(tint: Color? = nil) -> some View {
         self.buttonStyle(Buttons.GlassButtonStyle(tint: tint))
     }
 }
 
+// MARK: - Helper Extensions
+// Extension removed to avoid redeclaration - available in Theme or other shared location
+
+// Deprecated components removed - use modern button styles instead
+
 // MARK: - Previews
-#Preview("Button Styles") {
-    VStack(spacing: 40) {
+#Preview("Modern Button Styles") {
+    VStack(spacing: 30) {
+        Text("Modern Button Styles")
+            .font(Theme.Typography.title2)
+            .padding(.bottom)
+        
+        // Circular button
         Button(action: {}) {
             Image(systemName: "camera.fill")
         }
-        .circularButton(size: 80)
+        .circularButton(size: 64, backgroundColor: Theme.Colors.primaryGreen, foregroundColor: .white)
         
+        // Standard pill button
         Button("Pill Button") {}
             .pillButton()
         
-        Button("Glass Button") {}
-            .glassButton(tint: Theme.Colors.primary)
+        // Full width pill button
+        Button("Full Width Pill") {}
+            .pillButton(fullWidth: true)
         
+        // Primary action button
+        Button("Primary Action") {}
+            .primaryActionButton()
+        
+        // Glass button
+        Button("Glass Button") {}
+            .glassButton(tint: Theme.Colors.primaryGreen)
+        
+        // Small circular navigation button
         Button(action: {}) {
             Image(systemName: "arrow.right")
                 .font(.system(size: 16, weight: .bold))
         }
-        .circularButton(size: 48, backgroundColor: .black, foregroundColor: .white, hasBorder: false)
+        .circularButton(size: 40, backgroundColor: Theme.Colors.textPrimary, foregroundColor: .white, hasBorder: false)
     }
     .padding()
-    .background(Color.gray.opacity(0.1))
-}
-
-struct PixelButton: View {
-    enum Style {
-        case primary
-        case secondary
-        
-        var backgroundColor: Color {
-            switch self {
-            case .primary:
-                return Theme.Colors.primary
-            case .secondary:
-                return Theme.Colors.secondary
-            }
-        }
-        
-        var foregroundColor: Color {
-            switch self {
-            case .primary, .secondary:
-                return .white
-            }
-        }
-        
-        var strokeColor: Color {
-            switch self {
-            case .primary:
-                return Color("#8BAC0F")
-            case .secondary:
-                return Color.gray.opacity(0.8)
-            }
-        }
-    }
-    
-    let style: Style
-    let icon: String
-    var action: () -> Void
-    
-    @State private var isPressed = false
-    
-    var body: some View {
-        Button(action: {
-            let impactGenerator = UIImpactFeedbackGenerator(style: .heavy)
-            impactGenerator.prepare()
-            
-            // Provide haptic feedback
-            impactGenerator.impactOccurred()
-            
-            action()
-        }) {
-            Image(systemName: icon)
-                .font(.system(size: 24, weight: .bold))
-                .foregroundColor(style.foregroundColor)
-                .frame(width: 72, height: 72)
-                .background(style.backgroundColor)
-                .clipShape(Circle())
-                .overlay(
-                    Circle()
-                        .strokeBorder(style.strokeColor, lineWidth: 2)
-                        .padding(4)
-                )
-                .shadow(color: Color("#0F380F").opacity(0.5), radius: 2, x: 0, y: 2)
-                .scaleEffect(isPressed ? 0.95 : 1.0)
-        }
-        .buttonStyle(PlainButtonStyle())
-        .pressEvents(onPress: { isPressed = true }, onRelease: { isPressed = false })
-    }
-}
-
-// Add a helper for press events
-extension View {
-    func pressEvents(onPress: @escaping () -> Void, onRelease: @escaping () -> Void) -> some View {
-        self.simultaneousGesture(
-            DragGesture(minimumDistance: 0)
-                .onChanged { _ in onPress() }
-                .onEnded { _ in onRelease() }
-        )
-    }
+    .background(Theme.Colors.systemBackground)
 } 

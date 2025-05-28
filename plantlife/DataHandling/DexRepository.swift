@@ -105,19 +105,20 @@ class DexRepository {
         fetchDescriptor.fetchLimit = 1
         
         guard let entryToUpdate = try modelContext.fetch(fetchDescriptor).first else {
-            print("Error: DexEntry with ID \(entryId) not found for sprite update.")
-            // Optionally throw an error here
+            print("[DexRepository] Error: DexEntry with ID \(entryId) not found for sprite update.")
             enum UpdateError: Error { case entryNotFound }
             throw UpdateError.entryNotFound
         }
         entryToUpdate.sprite = spriteData
         entryToUpdate.spriteGenerationFailed = false // Reset failure flag on successful update
+        print("[DexRepository] Attempting to save sprite for DexEntry ID: \(entryId). Sprite data size: \(spriteData.count)")
         do {
             try modelContext.save()
+            print("[DexRepository] Successfully saved sprite for DexEntry ID: \(entryId) to context.")
         } catch {
-            print("DexRepository: failed to save context after sprite update: \(error)")
+            print("[DexRepository] Failed to save context after sprite update for ID \(entryId): \(error)")
+            throw error // Re-throw
         }
-        print("Sprite updated for DexEntry ID: \(entryId)")
     }
 
     /// Marks sprite generation as failed for a specific DexEntry.
@@ -127,17 +128,18 @@ class DexRepository {
         fetchDescriptor.fetchLimit = 1
         
         guard let entryToUpdate = try modelContext.fetch(fetchDescriptor).first else {
-            print("Error: DexEntry with ID \(entryId) not found to mark sprite generation failed.")
+            print("[DexRepository] Error: DexEntry with ID \(entryId) not found to mark sprite generation failed.")
             enum UpdateError: Error { case entryNotFound }
             throw UpdateError.entryNotFound
         }
         entryToUpdate.spriteGenerationFailed = true
         do {
             try modelContext.save()
+            print("[DexRepository] Marked sprite generation failed for DexEntry ID: \(entryId)")
         } catch {
-            print("DexRepository: failed to save context after marking failure: \(error)")
+            print("[DexRepository] Failed to save context after marking failure: \(error)")
+            throw error
         }
-        print("Marked sprite generation failed for DexEntry ID: \(entryId)")
     }
 
     /// Fetches the maximum ID currently in use.

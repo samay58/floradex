@@ -39,21 +39,80 @@ struct PlantLifeApp: App {
 
     var body: some Scene {
         WindowGroup {
-            let imageService = ImageSelectionService.shared
-            TabView {
-                FloradexHomeScreen()
-                    .tabItem {
-                        Label("Floradex", systemImage: "leaf.fill")
-                    }
-
-                ContentView(viewModel: ClassificationViewModel(speciesRepository: self.speciesRepository, dexRepository: self.dexRepository))
-                    .tabItem {
-                        Label("Identify", systemImage: "camera.fill")
-                    }
-            }
-            .environmentObject(imageService)
-            .environment(\.font, Font.jetBrainsMono(size: 16))
+            PlantLifeContentView(
+                speciesRepository: speciesRepository,
+                dexRepository: dexRepository
+            )
         }
         .modelContainer(modelContainer)
     }
-} 
+}
+
+// Separate view to properly manage @StateObject instances
+struct PlantLifeContentView: View {
+    let speciesRepository: SpeciesRepository
+    let dexRepository: DexRepository
+    
+    @StateObject private var imageService = ImageSelectionService.shared
+    @StateObject private var classificationViewModel: ClassificationViewModel
+    @StateObject private var floradexViewModel: FloradexCollectionViewModel
+    @State private var selectedTab = 0
+    
+    init(speciesRepository: SpeciesRepository, dexRepository: DexRepository) {
+        self.speciesRepository = speciesRepository
+        self.dexRepository = dexRepository
+        
+        // Initialize StateObjects in init
+        self._classificationViewModel = StateObject(wrappedValue: ClassificationViewModel(
+            speciesRepository: speciesRepository,
+            dexRepository: dexRepository
+        ))
+        self._floradexViewModel = StateObject(wrappedValue: FloradexCollectionViewModel(
+            dexRepository: dexRepository
+        ))
+    }
+    
+    var body: some View {
+        TabView(selection: $selectedTab) {
+            IdentifyLandingView(viewModel: classificationViewModel)
+                .tabItem { Label("Identify", systemImage: "camera.fill") }
+                .tag(0)
+
+            FloradexCollectionView(viewModel: floradexViewModel)
+                .tabItem { Label("My Floradex", systemImage: "leaf.fill") }
+                .tag(1)
+
+            ProfileView()
+                .tabItem { Label("Profile", systemImage: "person.fill") }
+                .tag(2)
+        }
+        .tint(Theme.Colors.primaryGreen) // Set active tab icon color
+        .environmentObject(imageService)
+        .onChange(of: selectedTab) { oldValue, newValue in
+            // When switching away from the Identify tab, cancel any ongoing processing
+            if oldValue == 0 && newValue != 0 {
+                classificationViewModel.cleanup()
+                // Clear the selected image to prevent re-processing
+                imageService.selectedImage = nil
+            }
+            // When switching to Floradex, refresh the entries
+            if newValue == 1 {
+                floradexViewModel.fetchEntries()
+            }
+        }
+        .onAppear {
+            let appearance = UITabBarAppearance()
+            appearance.configureWithDefaultBackground() // Modern blurred background
+            // For a solid color background, uncomment below and use .configureWithOpaqueBackground()
+            // appearance.backgroundColor = UIColor(Theme.Colors.systemBackground)
+
+            UITabBar.appearance().standardAppearance = appearance
+            if #available(iOS 15.0, *) {
+                UITabBar.appearance().scrollEdgeAppearance = appearance
+            }
+            UITabBar.appearance().isTranslucent = true // Required for blur effect
+            // Optional: Set unselected item color if needed, e.g.:
+            // UITabBar.appearance().unselectedItemTintColor = UIColor(Theme.Colors.iconSecondary)
+        }
+    }
+}
