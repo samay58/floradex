@@ -25,6 +25,14 @@ enum SunlightLevel: String, CaseIterable, Identifiable {
     //    case .shade: return 2
     //    }
     // }
+    
+    var gaugeValue: Int {
+        switch self {
+        case .shade: return 1
+        case .partialSun: return 3
+        case .fullSun: return 5
+        }
+    }
 }
 
 struct SunlightGaugeView: View {

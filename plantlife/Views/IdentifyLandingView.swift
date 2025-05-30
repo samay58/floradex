@@ -1,6 +1,7 @@
 import SwiftUI
 import PhotosUI
 import SwiftData
+import Combine
 
 struct IdentifyLandingView: View {
     @ObservedObject var viewModel: ClassificationViewModel
@@ -9,6 +10,12 @@ struct IdentifyLandingView: View {
 
     // Single presentation state to prevent conflicts
     @State private var presentationState: PresentationState = .none
+    
+    // Animation states
+    @State private var imageScale: CGFloat = 1.0
+    @State private var imageOpacity: Double = 0.0
+    @State private var showEmptyState = true
+    @State private var buttonBreathing = false
     
     enum PresentationState {
         case none
@@ -29,16 +36,51 @@ struct IdentifyLandingView: View {
                             .scaledToFit()
                             .frame(maxHeight: 250)
                             .cornerRadius(Theme.Metrics.cornerRadiusMedium)
+                            .scaleEffect(imageScale)
+                            .opacity(imageOpacity)
+                            .blur(radius: imageOpacity < 1 ? 10 * (1 - imageOpacity) : 0)
                             .padding()
+                            .onAppear {
+                                showEmptyState = false
+                                withAnimation(AnimationConstants.signatureSpring) {
+                                    imageScale = 1.02
+                                    imageOpacity = 1.0
+                                }
+                                
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                    withAnimation(AnimationConstants.smoothSpring) {
+                                        imageScale = 0.98
+                                    }
+                                    
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                                        withAnimation(AnimationConstants.smoothSpring) {
+                                            imageScale = 1.0
+                                        }
+                                    }
+                                }
+                                
+                                HapticManager.shared.imageSelection()
+                                buttonBreathing = true
+                            }
                         
                         Button {
-                            imageService.selectedImage = nil
+                            HapticManager.shared.buttonTap()
+                            withAnimation(AnimationConstants.quickSpring) {
+                                imageOpacity = 0.0
+                                imageScale = 0.8
+                            }
+                            
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                imageService.selectedImage = nil
+                                showEmptyState = true
+                                buttonBreathing = false
+                            }
                         } label: {
                             Image(systemName: "xmark.circle.fill")
                                 .font(.title2)
                                 .foregroundColor(Theme.Colors.iconPrimary)
                                 .background(Circle().fill(Theme.Colors.systemBackground.opacity(0.6)))
-                                .padding(Theme.Metrics.Padding.medium) // Adjusted padding
+                                .padding(Theme.Metrics.Padding.medium)
                         }
                     }
                 } else {
@@ -48,23 +90,31 @@ struct IdentifyLandingView: View {
                             .font(.system(size: 60, weight: .light))
                             .foregroundColor(Theme.Colors.iconSecondary)
                             .padding(.bottom, Theme.Metrics.Padding.small)
+                            .scaleEffect(showEmptyState ? 1.0 : 0.8)
+                            .opacity(showEmptyState ? 1.0 : 0.0)
                         Text("Select an image to identify")
                             .font(Theme.Typography.body)
                             .foregroundColor(Theme.Colors.textSecondary)
+                            .opacity(showEmptyState ? 1.0 : 0.0)
                         Spacer()
                     }
-                    .frame(maxHeight: 250) // Ensure consistent height with image preview
+                    .frame(maxHeight: 250)
                     .padding()
+                    .onAppear {
+                        withAnimation(AnimationConstants.signatureSpring.delay(0.1)) {
+                            showEmptyState = true
+                        }
+                    }
                 }
 
                 // Icon Buttons
                 optionButtonsSection
                 
                 Spacer()
-                Spacer() // Add more space to push button down
 
                 // Identify Button (enabled if an image is selected)
                 identifyButtonSection
+                    .padding(.bottom, Theme.Metrics.Padding.large) // Add bottom padding instead of multiple spacers
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Theme.Colors.systemBackground)
@@ -136,19 +186,50 @@ struct IdentifyLandingView: View {
         HStack(spacing: Theme.Metrics.Padding.large) {
             // Gallery Button
             Button {
-                guard presentationState == .none else { return }
+                print("Gallery button tapped, presentationState: \(presentationState)")
+                guard presentationState == .none else { 
+                    print("Gallery button blocked - presentationState not .none")
+                    return 
+                }
+                HapticManager.shared.buttonTap()
                 presentationState = .photoPicker
+                print("Set presentationState to .photoPicker")
             } label: {
                 IdentifyOptionButton(iconName: "photo.on.rectangle.angled", label: "Gallery")
             }
 
             // Camera Button
             Button {
-                guard presentationState == .none else { return }
-                if permissions.isFullyAuthorized {
+                print("Camera button tapped, presentationState: \(presentationState)")
+                guard presentationState == .none else { 
+                    print("Camera button blocked - presentationState not .none")
+                    return 
+                }
+                HapticManager.shared.buttonTap()
+                
+                // Check camera permission status
+                let status = AVCaptureDevice.authorizationStatus(for: .video)
+                switch status {
+                case .authorized:
                     presentationState = .camera
-                } else {
-                    permissions.requestCameraAccess()
+                    print("Set presentationState to .camera")
+                case .notDetermined:
+                    print("Requesting camera access")
+                    AVCaptureDevice.requestAccess(for: .video) { granted in
+                        DispatchQueue.main.async {
+                            if granted {
+                                presentationState = .camera
+                                print("Camera access granted, opening camera")
+                            } else {
+                                print("Camera access denied")
+                            }
+                        }
+                    }
+                case .denied, .restricted:
+                    print("Camera access denied or restricted - show settings alert")
+                    // TODO: Show alert to go to settings
+                @unknown default:
+                    print("Unknown camera authorization status")
                 }
             } label: {
                 IdentifyOptionButton(iconName: "camera", label: "Camera")
@@ -156,8 +237,14 @@ struct IdentifyLandingView: View {
             
             // URL Button
             Button {
-                guard presentationState == .none else { return }
+                print("URL button tapped, presentationState: \(presentationState)")
+                guard presentationState == .none else { 
+                    print("URL button blocked - presentationState not .none")
+                    return 
+                }
+                HapticManager.shared.buttonTap()
                 presentationState = .urlEntry
+                print("Set presentationState to .urlEntry")
             } label: {
                 IdentifyOptionButton(iconName: "link", label: "Web")
             }
@@ -168,12 +255,16 @@ struct IdentifyLandingView: View {
     private var identifyButtonSection: some View {
         Button {
             if imageService.selectedImage != nil && presentationState == .none {
+                HapticManager.shared.buttonTap()
                 presentationState = .details
             }
         } label: {
             identifyButtonLabel
         }
         .disabled(imageService.selectedImage == nil || presentationState != .none)
+        .modifier(buttonBreathing && imageService.selectedImage != nil ? 
+            BreathingModifier(minScale: 0.985, maxScale: 1.015) : 
+            BreathingModifier(minScale: 1.0, maxScale: 1.0))
         .accessibilityLabel("Identify plant")
         .accessibilityHint(imageService.selectedImage != nil ? 
                            "Double tap to identify the selected plant image" : 
@@ -201,12 +292,13 @@ struct IdentifyLandingView: View {
     
     private var helpButton: some View {
         Button(action: {
-            // Help action - placeholder
-            print("Help tapped")
+            print("Help button tapped - showing help content")
+            // TODO: Show help sheet or navigate to help view
         }) {
             Image(systemName: "questionmark.circle")
                 .foregroundColor(Theme.Colors.iconPrimary)
         }
+        .buttonStyle(ScaleButtonStyle())
     }
     
     // Function to download image from URL
@@ -303,6 +395,15 @@ struct ImageURLEntryView: View {
             }
         }
         .navigationViewStyle(.stack)
+    }
+}
+
+// Custom button style for scale animation
+struct ScaleButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.96 : 1.0)
+            .animation(AnimationConstants.microSpring, value: configuration.isPressed)
     }
 }
 

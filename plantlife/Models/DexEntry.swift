@@ -11,6 +11,13 @@ final class DexEntry: Sendable {
     var tags: [String]
     var notes: String?
     var spriteGenerationFailed: Bool
+    
+    // Relationship to species details for common name
+    var commonName: String? {
+        // This would normally come from a relationship to SpeciesDetails
+        // For now, return nil as we don't have the relationship set up
+        return nil
+    }
 
     init(id: Int,
          createdAt: Date = .now,

@@ -113,6 +113,31 @@ final class SpeciesDetails: Identifiable, Codable, Sendable {
 
 // MARK: - Parsed Properties for Gauges
 extension SpeciesDetails {
+    // Additional properties that might exist from various data sources
+    var family: String? { nil }
+    var nativeRegion: String? { nil }
+    var careDifficulty: Int? { nil }
+    var minTemp: Int? {
+        if let range = parsedTemperatureRange {
+            return Int(range.lowerBound)
+        }
+        return nil
+    }
+    var maxTemp: Int? {
+        if let range = parsedTemperatureRange {
+            return Int(range.upperBound)
+        }
+        return nil
+    }
+    var parsedDescription: String? { summary }
+    var sunlightLevel: Int? {
+        switch parsedSunlightLevel {
+        case .shade: return 1
+        case .partialSun: return 3
+        case .fullSun: return 5
+        }
+    }
+    var difficultyLevel: Int? { careDifficulty }
     var parsedSunlightLevel: SunlightLevel {
         guard let sunlightString = sunlight?.lowercased() else { return .partialSun } // Default
         if sunlightString.contains("full sun") {

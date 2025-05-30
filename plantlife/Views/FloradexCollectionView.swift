@@ -7,19 +7,34 @@ class FloradexCollectionViewModel: ObservableObject {
     private var dexRepository: DexRepository
     @Published var entries: [DexEntry] = []
     @Published var selectedTags: Set<String> = []
+    @Published var searchText: String = ""
+    @Published var sortOption: DexSortOption = .numberAsc
 
     var availableTags: [String] {
         Array(Set(entries.flatMap { $0.tags })).sorted()
     }
 
     var filteredEntries: [DexEntry] {
-        if selectedTags.isEmpty {
-            return entries
-        } else {
-            return entries.filter { entry in
+        var filtered = entries
+        
+        // Apply search filter
+        if !searchText.isEmpty {
+            filtered = filtered.filter { entry in
+                entry.latinName.localizedCaseInsensitiveContains(searchText) ||
+                entry.commonName?.localizedCaseInsensitiveContains(searchText) ?? false ||
+                entry.tags.contains { $0.localizedCaseInsensitiveContains(searchText) }
+            }
+        }
+        
+        // Apply tag filter
+        if !selectedTags.isEmpty {
+            filtered = filtered.filter { entry in
                 !Set(entry.tags).isDisjoint(with: selectedTags)
             }
         }
+        
+        // Apply sort
+        return dexRepository.sort(filtered, by: sortOption)
     }
 
     init(dexRepository: DexRepository) {
@@ -28,12 +43,9 @@ class FloradexCollectionViewModel: ObservableObject {
     }
 
     func fetchEntries() {
-        // Default sort or apply user-selected sort
+        // Fetch all entries (we'll sort in filteredEntries)
         self.entries = dexRepository.all(sort: .numberAsc)
         print("[FloradexCollectionViewModel] Fetched \(entries.count) entries from repository")
-        for entry in entries {
-            print("[FloradexCollectionViewModel] Entry ID: \(entry.id), has sprite: \(entry.sprite != nil), sprite size: \(entry.sprite?.count ?? 0), sprite failed: \(entry.spriteGenerationFailed)")
-        }
     }
     
     func deleteEntry(_ entry: DexEntry) {
@@ -44,6 +56,7 @@ class FloradexCollectionViewModel: ObservableObject {
 
 struct FloradexCollectionView: View {
     @StateObject var viewModel: FloradexCollectionViewModel
+    @State private var isSelectionMode = false
 
     private let columns = [
         GridItem(.flexible(), spacing: Theme.Metrics.Padding.medium),
@@ -53,100 +66,46 @@ struct FloradexCollectionView: View {
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
-                // Tag Filter Section (if there are tags available)
-                if !viewModel.availableTags.isEmpty {
-                    VStack(alignment: .leading, spacing: Theme.Metrics.Padding.small) {
-                        Text("Filter by Category")
-                            .font(Theme.Typography.subheadline.weight(.medium))
-                            .foregroundColor(Theme.Colors.textSecondary)
-                            .padding(.horizontal, Theme.Metrics.Padding.medium)
-                        
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            LazyHStack(spacing: Theme.Metrics.Padding.extraSmall) {
-                                // "All" button to clear filters
-                                TagChip(
-                                    tagName: "All",
-                                    isSelected: viewModel.selectedTags.isEmpty
-                                ) {
-                                    viewModel.selectedTags.removeAll()
-                                }
-                                
-                                // Individual tag filters
-                                ForEach(viewModel.availableTags, id: \.self) { tag in
-                                    TagChip(
-                                        tagName: tag,
-                                        isSelected: viewModel.selectedTags.contains(tag)
-                                    ) {
-                                        if viewModel.selectedTags.contains(tag) {
-                                            viewModel.selectedTags.remove(tag)
-                                        } else {
-                                            viewModel.selectedTags.insert(tag)
-                                        }
-                                    }
-                                }
-                            }
-                            .padding(.horizontal, Theme.Metrics.Padding.medium)
-                        }
+                // Enhanced Search & Filter UI
+                SearchFilterView(
+                    searchText: $viewModel.searchText,
+                    selectedTags: $viewModel.selectedTags,
+                    sortOption: $viewModel.sortOption,
+                    availableTags: viewModel.availableTags,
+                    onClear: {
+                        viewModel.searchText = ""
+                        viewModel.selectedTags.removeAll()
+                        viewModel.sortOption = .numberAsc
                     }
-                    .padding(.bottom, Theme.Metrics.Padding.small)
-                    .background(Theme.Colors.systemBackground)
-                }
+                )
                 
-                ScrollView {
-                    if viewModel.filteredEntries.isEmpty {
-                        VStack(spacing: Theme.Metrics.Padding.large) {
-                            Spacer()
-                            
-                            Image(systemName: viewModel.selectedTags.isEmpty ? "leaf.circle" : "magnifyingglass")
-                                .font(.system(size: 60))
-                                .foregroundColor(Theme.Colors.iconSecondary)
-                            
-                            Text(viewModel.selectedTags.isEmpty ? "Your Floradex is empty" : "No plants match the selected filters")
-                                .font(Theme.Typography.title2)
-                                .foregroundColor(Theme.Colors.textPrimary)
-                                .multilineTextAlignment(.center)
-                            
-                            Text(viewModel.selectedTags.isEmpty ? 
-                                 "Identify some plants to add them to your collection!" :
-                                 "Try selecting different categories or clear filters to see all plants.")
-                                .font(Theme.Typography.body)
-                                .foregroundColor(Theme.Colors.textSecondary)
-                                .multilineTextAlignment(.center)
-                            
-                            if !viewModel.selectedTags.isEmpty {
-                                Button("Clear Filters") {
-                                    viewModel.selectedTags.removeAll()
-                                }
-                                .pillButton()
-                                .padding(.top, Theme.Metrics.Padding.small)
-                            }
-                            
-                            Spacer()
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(Theme.Metrics.Padding.extraLarge)
-                    } else {
-                        LazyVGrid(columns: columns, spacing: Theme.Metrics.Padding.medium) {
-                            ForEach(viewModel.filteredEntries) { entry in
-                                NavigationLink(destination: PlantDetailsView(entry: entry)) {
-                                    CollectionPlantCard(entry: entry)
-                                }
-                                .buttonStyle(PlainButtonStyle())
-                                .contextMenu { // Keep context menu for deletion
-                                    Button(role: .destructive) {
-                                        viewModel.deleteEntry(entry)
-                                    } label: {
-                                        Label("Delete", systemImage: "trash")
-                                    }
-                                }
-                            }
-                        }
-                        .padding(Theme.Metrics.Padding.medium)
-                    }
-                }
+                // Use DexGrid instead of LazyVGrid for consistency
+                DexGrid(
+                    entries: viewModel.filteredEntries,
+                    onRefresh: {
+                        viewModel.fetchEntries()
+                    },
+                    onDelete: { entry in
+                        viewModel.deleteEntry(entry)
+                    },
+                    isSelectionMode: $isSelectionMode
+                )
             }
             .background(Theme.Colors.systemBackground)
             .navigationTitle("My Floradex")
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        withAnimation(AnimationConstants.smoothSpring) {
+                            isSelectionMode.toggle()
+                        }
+                        HapticManager.shared.tick()
+                    } label: {
+                        Text(isSelectionMode ? "Done" : "Select")
+                            .font(Theme.Typography.body.weight(.medium))
+                    }
+                }
+            }
             .onAppear {
                 viewModel.fetchEntries()
             }

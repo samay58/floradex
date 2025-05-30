@@ -10,6 +10,7 @@ struct FloradexHomeScreen: View {
     // State for tag filtering
     @State private var selectedTags: Set<String> = []
     @State private var currentSortOrder: DexSortOption = .numberAsc // Default sort
+    @State private var isSelectionMode = false
     
     // Computed property for all unique tags from the entries
     private var availableTags: [String] {
@@ -75,11 +76,23 @@ struct FloradexHomeScreen: View {
                 }, onDelete: { entry in
                     let repo = DexRepository(modelContext: modelContext)
                     repo.delete(entry)
-                })
+                }, isSelectionMode: $isSelectionMode)
             }
             .navigationTitle("Floradex")
             .background(Theme.Colors.dexBackground)
-            // TODO: Add toolbar items for adding new entries, settings, etc.
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        withAnimation(AnimationConstants.smoothSpring) {
+                            isSelectionMode.toggle()
+                        }
+                        HapticManager.shared.tick()
+                    } label: {
+                        Text(isSelectionMode ? "Done" : "Select")
+                            .font(Theme.Typography.body.weight(.medium))
+                    }
+                }
+            }
         }
     }
 }

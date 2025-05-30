@@ -1,122 +1,134 @@
 import SwiftUI
 import AVFoundation
+import PhotosUI
 
 struct CameraCaptureView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var imageService: ImageSelectionService
     @State private var isFlashEnabled: Bool = false
-    @State private var appearedAnimation: Bool = false
     @State private var cameraController: CameraViewController?
+    @State private var showingPhotoPicker = false
+    @State private var captureAnimation = false
     
     var body: some View {
         ZStack {
-            // Black background for full-screen effect
-            Color.black.ignoresSafeArea()
-            
-            GeometryReader { geometry in
-                VStack(spacing: 0) {
-                    // Modern toolbar with overlay buttons
-                        HStack {
-                            Button {
-                                let generator = UIImpactFeedbackGenerator(style: .light)
-                                generator.impactOccurred()
-                                dismiss()
-                            } label: {
-                                Image(systemName: "xmark")
-                                .font(.system(size: 18, weight: .semibold))
-                                .foregroundColor(.white)
-                            }
-                            .circularButton(
-                                size: 44,
-                                backgroundColor: .black.opacity(0.5),
-                                foregroundColor: .white,
-                                hasBorder: false
-                            )
-                            
-                            Spacer()
-                            
-                            Button {
-                                let generator = UIImpactFeedbackGenerator(style: .light)
-                                generator.impactOccurred()
-                                isFlashEnabled.toggle()
-                            } label: {
-                                Image(systemName: isFlashEnabled ? "bolt.fill" : "bolt.slash")
-                                .font(.system(size: 18, weight: .semibold))
-                                .foregroundColor(isFlashEnabled ? .yellow : .white)
-                            }
-                            .circularButton(
-                                size: 44,
-                                backgroundColor: .black.opacity(0.5),
-                                foregroundColor: isFlashEnabled ? .yellow : .white,
-                                hasBorder: false
-                            )
-                        }
-                        .padding(.horizontal)
-                    .padding(.top, 10)
-                    
-                    Spacer()
-                    
-                    // Modern camera preview with clean frame
-                    ZStack {
-                        // Camera controller with rounded corners
-                        CameraViewControllerRepresentable(
-                            flashEnabled: isFlashEnabled,
-                            cameraController: $cameraController
-                        ) { image in
-                                let generator = UINotificationFeedbackGenerator()
-                                generator.notificationOccurred(.success)
-                                
-                                print("Image captured: \(image.size.width)x\(image.size.height)")
-                                imageService.selectedImage = image
-                                dismiss()
-                            }
-                        .frame(maxWidth: geometry.size.width - 32)
-                        .frame(height: geometry.size.width - 32) // Square aspect ratio
-                        .cornerRadius(Theme.Metrics.cornerRadiusLarge)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: Theme.Metrics.cornerRadiusLarge)
-                                .stroke(Color.white.opacity(0.3), lineWidth: 2)
-                        )
-                        .opacity(appearedAnimation ? 1 : 0)
-                        .offset(y: appearedAnimation ? 0 : 20)
-                    }
-                    .frame(maxHeight: .infinity)
-                    
-                    Spacer()
-                    
-                    // Modern shutter button at bottom
-                    HStack {
-                        Spacer()
-                        
-                        Button {
-                            // Trigger camera capture
-                            let generator = UIImpactFeedbackGenerator(style: .heavy)
-                            generator.impactOccurred()
-                            cameraController?.capturePhoto()
-                        } label: {
-                            Image(systemName: "camera.fill")
-                                .font(.system(size: 28, weight: .bold))
-                                .foregroundColor(.white)
-                        }
-                        .circularButton(
-                            size: 72,
-                            backgroundColor: Theme.Colors.primaryGreen,
-                            foregroundColor: .white,
-                            hasBorder: false
-                        )
-                        .scaleEffect(appearedAnimation ? 1 : 0.95)
-                        .padding(.bottom, 40)
-                        
-                        Spacer()
-                    }
+            // Full-screen camera preview
+            CameraViewControllerRepresentable(
+                flashEnabled: isFlashEnabled,
+                cameraController: $cameraController
+            ) { image in
+                // Capture animation
+                withAnimation(.easeOut(duration: 0.1)) {
+                    captureAnimation = true
+                }
+                
+                let generator = UINotificationFeedbackGenerator()
+                generator.notificationOccurred(.success)
+                
+                print("Image captured: \(image.size.width)x\(image.size.height)")
+                imageService.selectedImage = image
+                
+                // Delay dismiss to show capture animation
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                    dismiss()
                 }
             }
+            .ignoresSafeArea()
+            
+            // Flash overlay for capture animation
+            if captureAnimation {
+                Color.white
+                    .ignoresSafeArea()
+                    .opacity(captureAnimation ? 1 : 0)
+                    .animation(.easeOut(duration: 0.2), value: captureAnimation)
+                    .onAppear {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            captureAnimation = false
+                        }
+                    }
+            }
+            
+            // Top controls overlay
+            VStack {
+                HStack {
+                    // Close button
+                    Button {
+                        HapticManager.shared.buttonTap()
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundColor(.white)
+                            .frame(width: 44, height: 44)
+                            .background(Circle().fill(Color.black.opacity(0.3)))
+                    }
+                    
+                    Spacer()
+                    
+                    // Flash button
+                    Button {
+                        HapticManager.shared.buttonTap()
+                        isFlashEnabled.toggle()
+                        cameraController?.flashEnabled = isFlashEnabled
+                    } label: {
+                        Image(systemName: isFlashEnabled ? "bolt.fill" : "bolt.slash.fill")
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundColor(isFlashEnabled ? .yellow : .white)
+                            .frame(width: 44, height: 44)
+                            .background(Circle().fill(Color.black.opacity(0.3)))
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 60) // Account for status bar
+                
+                Spacer()
+                
+                // Bottom controls
+                HStack(alignment: .center, spacing: 60) {
+                    // Photo library button
+                    Button {
+                        HapticManager.shared.buttonTap()
+                        showingPhotoPicker = true
+                    } label: {
+                        Image(systemName: "photo.on.rectangle")
+                            .font(.system(size: 24, weight: .medium))
+                            .foregroundColor(.white)
+                            .frame(width: 50, height: 50)
+                            .background(Circle().fill(Color.black.opacity(0.3)))
+                    }
+                    
+                    // Capture button
+                    Button {
+                        HapticManager.shared.cameraCapture()
+                        if let controller = cameraController {
+                            controller.capturePhoto()
+                        }
+                    } label: {
+                        ZStack {
+                            Circle()
+                                .fill(Theme.Colors.primaryGreen)
+                                .frame(width: 70, height: 70)
+                            
+                            Circle()
+                                .stroke(Theme.Colors.primaryGreen.opacity(0.3), lineWidth: 6)
+                                .frame(width: 80, height: 80)
+                        }
+                    }
+                    .scaleEffect(captureAnimation ? 0.9 : 1.0)
+                    
+                    // Spacer for balance
+                    Color.clear
+                        .frame(width: 50, height: 50)
+                }
+                .padding(.bottom, 50)
+            }
+        }
+        .sheet(isPresented: $showingPhotoPicker) {
+            PhotoPickerView()
+                .environmentObject(imageService)
         }
         .onAppear {
             print("CameraCaptureView appeared")
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
-                appearedAnimation = true
-            }
         }
     }
 }
@@ -148,140 +160,213 @@ class CameraViewController: UIViewController {
     private var captureSession: AVCaptureSession?
     private var previewLayer: AVCaptureVideoPreviewLayer?
     private var photoOutput: AVCapturePhotoOutput?
+    private var isCapturing = false
     
     // Callback
     var onImageCaptured: ((UIImage) -> Void)?
-    var flashEnabled: Bool = false
-    
-    // Shutter button (will be controlled by SwiftUI now)
-    private lazy var shutterButton: UIButton = {
-        let button = UIButton(type: .system)
-        button.translatesAutoresizingMaskIntoConstraints = false
-        button.backgroundColor = .white
-        button.layer.cornerRadius = 36
-        button.layer.borderWidth = 3
-        button.layer.borderColor = UIColor.white.cgColor
-        button.addTarget(self, action: #selector(capturePhoto), for: .touchUpInside)
-        return button
-    }()
+    var flashEnabled: Bool = false {
+        didSet {
+            // Update flash mode when changed
+            configureFlashMode()
+        }
+    }
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        print("Camera view controller loaded")
+        print("[CameraViewController] viewDidLoad")
         setupCamera()
     }
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        print("[CameraViewController] viewWillAppear")
         startSession()
     }
     
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
+        print("[CameraViewController] viewWillDisappear")
         stopSession()
     }
     
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
+        // Update preview layer frame to fill the entire view
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
         previewLayer?.frame = view.bounds
+        CATransaction.commit()
     }
     
     private func setupCamera() {
+        print("[CameraViewController] Setting up camera")
+        
+        // Check camera permission first
+        guard AVCaptureDevice.authorizationStatus(for: .video) == .authorized else {
+            print("[CameraViewController] Camera not authorized")
+            return
+        }
+        
         // Initialize session
         let session = AVCaptureSession()
-        session.sessionPreset = .photo
+        session.beginConfiguration()
+        
+        // Set preset for high quality photos
+        if session.canSetSessionPreset(.photo) {
+            session.sessionPreset = .photo
+        }
+        
         captureSession = session
         
-        // Check camera permission
-        guard AVCaptureDevice.authorizationStatus(for: .video) == .authorized else {
-            // Will be handled by the permissions overlay
-            return
-        }
-        
         // Add camera input
-        guard let camera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
-              let input = try? AVCaptureDeviceInput(device: camera) else {
-            print("Failed to get camera input")
+        guard let camera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back) else {
+            print("[CameraViewController] No back camera available")
+            session.commitConfiguration()
             return
         }
         
-        guard session.canAddInput(input) else {
-            print("Cannot add input to session")
+        do {
+            let input = try AVCaptureDeviceInput(device: camera)
+            
+            if session.canAddInput(input) {
+                session.addInput(input)
+                print("[CameraViewController] Camera input added")
+            } else {
+                print("[CameraViewController] Cannot add camera input")
+                session.commitConfiguration()
+                return
+            }
+        } catch {
+            print("[CameraViewController] Error creating camera input: \(error)")
+            session.commitConfiguration()
             return
         }
-        session.addInput(input)
         
         // Add photo output
         let output = AVCapturePhotoOutput()
-        guard session.canAddOutput(output) else {
-            print("Cannot add output to session")
+        if session.canAddOutput(output) {
+            session.addOutput(output)
+            // Configure for best quality
+            output.maxPhotoQualityPrioritization = .quality
+            photoOutput = output
+            print("[CameraViewController] Photo output added")
+        } else {
+            print("[CameraViewController] Cannot add photo output")
+            session.commitConfiguration()
             return
         }
-        session.addOutput(output)
-        output.isHighResolutionCaptureEnabled = true
-        photoOutput = output
+        
+        session.commitConfiguration()
         
         // Setup preview layer
         let previewLayer = AVCaptureVideoPreviewLayer(session: session)
         previewLayer.videoGravity = .resizeAspectFill
         previewLayer.frame = view.bounds
-        view.layer.addSublayer(previewLayer)
+        
+        // Add to view's layer
+        view.layer.insertSublayer(previewLayer, at: 0)
         self.previewLayer = previewLayer
         
-        print("Camera setup completed")
+        print("[CameraViewController] Camera setup completed successfully")
     }
     
     private func startSession() {
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            self?.captureSession?.startRunning()
-            print("Camera session started")
+        guard let session = captureSession else { return }
+        
+        DispatchQueue.global(qos: .userInitiated).async {
+            if !session.isRunning {
+                session.startRunning()
+                print("[CameraViewController] Camera session started")
+            }
         }
     }
     
     private func stopSession() {
-        captureSession?.stopRunning()
-        print("Camera session stopped")
+        guard let session = captureSession else { return }
+        
+        DispatchQueue.global(qos: .userInitiated).async {
+            if session.isRunning {
+                session.stopRunning()
+                print("[CameraViewController] Camera session stopped")
+            }
+        }
+    }
+    
+    private func configureFlashMode() {
+        // Flash configuration will be applied when taking photo
     }
     
     @objc public func capturePhoto() {
-        guard let photoOutput = photoOutput else {
-            print("Photo output not available")
+        guard !isCapturing else {
+            print("[CameraViewController] Already capturing")
             return
         }
         
-        let settings = AVCapturePhotoSettings()
-        settings.flashMode = flashEnabled ? .on : .auto
+        guard let photoOutput = photoOutput else {
+            print("[CameraViewController] Photo output not available")
+            return
+        }
         
+        guard let session = captureSession, session.isRunning else {
+            print("[CameraViewController] Capture session is not running")
+            return
+        }
+        
+        isCapturing = true
+        
+        // Configure photo settings
+        let settings = AVCapturePhotoSettings()
+        
+        // Configure flash
+        if photoOutput.supportedFlashModes.contains(.auto) {
+            settings.flashMode = flashEnabled ? .on : .auto
+        }
+        
+        // Enable best quality
+        settings.photoQualityPrioritization = .quality
+        
+        // Capture the photo
+        print("[CameraViewController] Capturing photo with flash: \(flashEnabled ? "on" : "auto")")
         photoOutput.capturePhoto(with: settings, delegate: self)
-        print("Capture photo requested")
     }
 }
 
 // MARK: - AVCapturePhotoCaptureDelegate
 extension CameraViewController: AVCapturePhotoCaptureDelegate {
     func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
+        defer {
+            isCapturing = false
+        }
+        
         if let error = error {
-            print("Error capturing photo: \(error.localizedDescription)")
+            print("[CameraViewController] Error capturing photo: \(error.localizedDescription)")
             return
         }
         
-        guard let imageData = photo.fileDataRepresentation(),
-              let image = UIImage(data: imageData) else {
-            print("Failed to create image from captured data")
+        guard let imageData = photo.fileDataRepresentation() else {
+            print("[CameraViewController] No image data")
             return
         }
         
-        // Get the correct orientation
-        let newImage: UIImage
+        guard let image = UIImage(data: imageData) else {
+            print("[CameraViewController] Failed to create UIImage from data")
+            return
+        }
+        
+        // Fix orientation based on device orientation
+        let fixedImage: UIImage
         if let cgImage = image.cgImage {
-            newImage = UIImage(cgImage: cgImage, scale: 1.0, orientation: .right)
+            // For back camera in portrait mode, the image needs to be rotated right
+            fixedImage = UIImage(cgImage: cgImage, scale: image.scale, orientation: .right)
         } else {
-            newImage = image
+            fixedImage = image
         }
         
+        print("[CameraViewController] Photo captured successfully: \(fixedImage.size)")
+        
+        // Call completion handler on main thread
         DispatchQueue.main.async { [weak self] in
-            self?.onImageCaptured?(newImage)
-            print("Photo captured successfully")
+            self?.onImageCaptured?(fixedImage)
         }
     }
 }

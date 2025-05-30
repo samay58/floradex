@@ -169,7 +169,7 @@ struct DexCardPager: View {
                     hapticGenerator.prepare()
                     hapticGenerator.impactOccurred()
                 }
-                SoundManager.shared.playSound(.tapWood)
+                // SoundManager.shared.playSound(.tapWood) // Sound file not available
             }
         }
     }

@@ -10,6 +10,8 @@ final class ClassificationViewModel: ObservableObject {
     @Published var species: String? = nil
     @Published var confidence: Double? = nil
     @Published var isLoading = false
+    @Published var isClassifying = false // More specific than isLoading
+    @Published var overallProgress: Double = 0.0 // Progress from 0.0 to 1.0
     @Published var details: SpeciesDetails? = nil
     @Published var currentDexEntry: DexEntry? = nil // To observe the new entry
 
@@ -96,10 +98,20 @@ final class ClassificationViewModel: ObservableObject {
         }
         
         isLoading = true
-        defer { isLoading = false }
+        isClassifying = true
+        overallProgress = 0.0
+        defer { 
+            isLoading = false
+            isClassifying = false
+        }
         
         self.species = nil
         self.confidence = nil
+        
+        // Update progress as we go through stages
+        withAnimation(AnimationConstants.smoothSpring) {
+            overallProgress = 0.1
+        }
         self.details = nil
         self.currentDexEntry = nil
 
@@ -127,6 +139,11 @@ final class ClassificationViewModel: ObservableObject {
             self.confidence = local.confidence
             triggerHaptic(for: local.confidence)
             print("[ClassificationViewModel] Local model: \(local.species) (\(String(format: "%.0f%%", local.confidence * 100)))")
+            
+            // Update progress after local classification
+            withAnimation(AnimationConstants.smoothSpring) {
+                overallProgress = 0.3
+            }
 
             if local.confidence >= 0.75 {
                 finalWinner = local
@@ -137,6 +154,11 @@ final class ClassificationViewModel: ObservableObject {
                 if let plantNet = try? await plantNetResultTask {
                     results.append(plantNet)
                     print("[ClassificationViewModel] PlantNet: \(plantNet.species) (\(String(format: "%.0f%%", plantNet.confidence * 100)))")
+                    
+                    // Update progress after PlantNet
+                    withAnimation(AnimationConstants.smoothSpring) {
+                        overallProgress = 0.5
+                    }
                 }
 
                 let lastConfidence = results.last?.confidence ?? 0.0
@@ -145,11 +167,22 @@ final class ClassificationViewModel: ObservableObject {
                     if let gpt = try? await classifier.classifyGPT4o(thumbnail) {
                         results.append(gpt)
                         print("[ClassificationViewModel] GPT-4o: \(gpt.species) (\(String(format: "%.0f%%", gpt.confidence * 100)))")
+                        
+                        // Update progress after GPT-4o
+                        withAnimation(AnimationConstants.smoothSpring) {
+                            overallProgress = 0.7
+                        }
                     }
                 }
                 
                 if results.count > 1 {
                     print("[ClassificationViewModel] Compiling results...")
+                    
+                    // Update progress for ensemble
+                    withAnimation(AnimationConstants.smoothSpring) {
+                        overallProgress = 0.8
+                    }
+                    
                     let ensembleOutcome = EnsembleService.vote(results)
                     finalWinner = ClassifierResult(species: ensembleOutcome.species, confidence: ensembleOutcome.confidence, source: .ensemble)
                 } else {
@@ -166,6 +199,12 @@ final class ClassificationViewModel: ObservableObject {
                 }
 
                 print("[ClassificationViewModel] Fetching details for \(speciesName)...")
+                
+                // Update progress for details fetching
+                withAnimation(AnimationConstants.smoothSpring) {
+                    overallProgress = 0.9
+                }
+                
                 finalDetails = await fetchAndCacheSpeciesDetails(latinName: speciesName)
                 self.details = finalDetails
                 print("Loaded details for \(speciesName):", self.details ?? "nil")
@@ -173,11 +212,14 @@ final class ClassificationViewModel: ObservableObject {
                 if let fetchedDetails = self.details {
                     print("[ClassificationViewModel] Saving to Dex: \(fetchedDetails.commonName ?? speciesName)...")
                     do {
+                        // Generate meaningful tags based on plant characteristics
+                        let tags = TagGenerator.generateTags(from: fetchedDetails)
+                        
                         // SwiftData operations already on main thread since this class is @MainActor
                         let newEntry = try await dexRepository.addEntry(
                             latinName: fetchedDetails.latinName,
                             snapshot: fullSnapshotImage,
-                            tags: []
+                            tags: tags
                         )
                         self.currentDexEntry = newEntry
                         print("Created DexEntry with ID: \(newEntry.id) for \(fetchedDetails.latinName)")
@@ -205,6 +247,11 @@ final class ClassificationViewModel: ObservableObject {
                                             self.currentDexEntry?.sprite = spriteData
                                             self.currentDexEntry?.spriteGenerationFailed = false
                                             print("[ClassificationViewModel] Updated local currentDexEntry's sprite for ID: \(newEntry.id)")
+                                            
+                                            // Final progress update
+                                            withAnimation(AnimationConstants.smoothSpring) {
+                                                self.overallProgress = 1.0
+                                            }
                                         }
                                     } catch {
                                         print("[ClassificationViewModel] Error updating sprite in repository for DexEntry ID: \(newEntry.id): \(error)")

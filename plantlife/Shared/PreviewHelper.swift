@@ -14,7 +14,7 @@ struct PreviewHelper {
             latinName: "Monstera deliciosa",
             // snapshot: sampleSnapshotData(), // Optional: provide a sample image data
             // sprite: sampleSpriteData(),     // Optional: provide a sample sprite data
-            tags: ["Indoor", "Foliage", "Popular"],
+            tags: ["Easy Care", "Indoor", "Climbing"],
             notes: "A beautiful and iconic houseplant. Easy to care for, loves bright indirect light.",
             spriteGenerationFailed: false
         )
@@ -27,7 +27,7 @@ struct PreviewHelper {
             id: 2,
             createdAt: Date().addingTimeInterval(-86400 * 2), // 2 days ago
             latinName: "Ficus lyrata",
-            tags: ["Indoor", "Tree"],
+            tags: ["Bright Light", "Indoor", "Tree"],
             notes: "Fiddle-leaf fig. Can be a bit finicky.",
             spriteGenerationFailed: false
         )
@@ -40,7 +40,7 @@ struct PreviewHelper {
             id: 3,
             createdAt: Date().addingTimeInterval(-86400 * 1), // 1 day ago
             latinName: "Calathea ornata",
-            tags: ["Indoor", "Patterned Leaves", "High Humidity"],
+            tags: ["High Water", "Low Light", "Foliage"],
             notes: "Pinstripe Calathea. Needs high humidity.",
             spriteGenerationFailed: true
         )
@@ -53,8 +53,8 @@ struct PreviewHelper {
             sampleDexEntry, 
             sampleDexEntryWithoutSprite, 
             sampleDexEntrySpriteFailed,
-            DexEntry(id: 4, latinName: "Pilea peperomioides", tags: ["Indoor", "Easy Care"], notes: "Chinese Money Plant."),
-            DexEntry(id: 5, latinName: "Sansevieria trifasciata", tags: ["Indoor", "Air Purifying"], notes: "Snake Plant. Very hardy.")
+            DexEntry(id: 4, latinName: "Pilea peperomioides", tags: ["Easy Care", "Medium Light", "Chinese Money Plant"], notes: "Chinese Money Plant."),
+            DexEntry(id: 5, latinName: "Sansevieria trifasciata", tags: ["Low Water", "Low Light", "Snake Plant"], notes: "Snake Plant. Very hardy.")
         ]
     }
 

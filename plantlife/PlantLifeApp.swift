@@ -73,22 +73,44 @@ struct PlantLifeContentView: View {
     }
     
     var body: some View {
-        TabView(selection: $selectedTab) {
-            IdentifyLandingView(viewModel: classificationViewModel)
-                .tabItem { Label("Identify", systemImage: "camera.fill") }
-                .tag(0)
-
-            FloradexCollectionView(viewModel: floradexViewModel)
-                .tabItem { Label("My Floradex", systemImage: "leaf.fill") }
-                .tag(1)
-
-            ProfileView()
-                .tabItem { Label("Profile", systemImage: "person.fill") }
-                .tag(2)
+        LiquidTabView(
+            selection: $selectedTab,
+            tabs: [
+                ("magnifyingglass", "Identify"),
+                ("leaf.fill", "Floradex"),
+                ("person.fill", "Profile")
+            ]
+        ) {
+            ZStack {
+                // Removed print to avoid constant re-rendering logs
+                switch selectedTab {
+                case 0:
+                    IdentifyLandingView(viewModel: classificationViewModel)
+                        .transition(.asymmetric(
+                            insertion: .move(edge: .trailing).combined(with: .opacity),
+                            removal: .move(edge: .leading).combined(with: .opacity)
+                        ))
+                case 1:
+                    FloradexCollectionView(viewModel: floradexViewModel)
+                        .transition(.asymmetric(
+                            insertion: .move(edge: selectedTab > 1 ? .leading : .trailing).combined(with: .opacity),
+                            removal: .move(edge: selectedTab > 1 ? .trailing : .leading).combined(with: .opacity)
+                        ))
+                case 2:
+                    ProfileView()
+                        .transition(.asymmetric(
+                            insertion: .move(edge: .leading).combined(with: .opacity),
+                            removal: .move(edge: .trailing).combined(with: .opacity)
+                        ))
+                default:
+                    EmptyView()
+                }
+            }
+            .animation(AnimationConstants.signatureSpring, value: selectedTab)
         }
-        .tint(Theme.Colors.primaryGreen) // Set active tab icon color
         .environmentObject(imageService)
         .onChange(of: selectedTab) { oldValue, newValue in
+            print("[PlantLifeContentView] Tab changed from \(oldValue) to \(newValue)")
             // When switching away from the Identify tab, cancel any ongoing processing
             if oldValue == 0 && newValue != 0 {
                 classificationViewModel.cleanup()
@@ -97,22 +119,9 @@ struct PlantLifeContentView: View {
             }
             // When switching to Floradex, refresh the entries
             if newValue == 1 {
+                print("[PlantLifeContentView] Fetching Floradex entries")
                 floradexViewModel.fetchEntries()
             }
-        }
-        .onAppear {
-            let appearance = UITabBarAppearance()
-            appearance.configureWithDefaultBackground() // Modern blurred background
-            // For a solid color background, uncomment below and use .configureWithOpaqueBackground()
-            // appearance.backgroundColor = UIColor(Theme.Colors.systemBackground)
-
-            UITabBar.appearance().standardAppearance = appearance
-            if #available(iOS 15.0, *) {
-                UITabBar.appearance().scrollEdgeAppearance = appearance
-            }
-            UITabBar.appearance().isTranslucent = true // Required for blur effect
-            // Optional: Set unselected item color if needed, e.g.:
-            // UITabBar.appearance().unselectedItemTintColor = UIColor(Theme.Colors.iconSecondary)
         }
     }
 }

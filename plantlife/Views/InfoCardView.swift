@@ -159,7 +159,7 @@ struct InfoCardView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 ForEach(["Sunlight", "Water", "Soil", "Temperature"], id: \.self) { label in
-                    InfoRow(label: label, value: details?.value(for: label), accentColor: Theme.Colors.accent(for: species))
+                    PlantInfo.InfoRow(label: label, value: details?.value(for: label) ?? "", accentColor: Theme.Colors.accent(for: species))
                         .opacity(appearAnimation ? 1 : 0)
                         .offset(y: appearAnimation ? 0 : 20)
                         .animation(Theme.Animations.staggered(index: ["Sunlight", "Water", "Soil", "Temperature"].firstIndex(of: label) ?? 0), value: appearAnimation)
@@ -176,7 +176,7 @@ struct InfoCardView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 ForEach(["Growth Habit", "Bloom Time"], id: \.self) { label in
-                    InfoRow(label: label, value: details?.value(for: label), accentColor: Theme.Colors.accent(for: species))
+                    PlantInfo.InfoRow(label: label, value: details?.value(for: label) ?? "", accentColor: Theme.Colors.accent(for: species))
                         .opacity(appearAnimation ? 1 : 0)
                         .offset(y: appearAnimation ? 0 : 20)
                         .animation(Theme.Animations.staggered(index: ["Growth Habit", "Bloom Time"].firstIndex(of: label) ?? 0), value: appearAnimation)
@@ -270,32 +270,6 @@ struct InfoCardView: View {
     }
 }
 
-// MARK: - InfoRow
-struct InfoRow: View {
-    let label: String
-    let value: String?
-    let accentColor: Color
-    
-    var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            Text(label)
-                .font(Theme.Typography.bodyMedium)
-                .foregroundStyle(Theme.Colors.secondary)
-                .frame(width: 100, alignment: .leading)
-            
-            if let value = value {
-                Text(value)
-                    .font(Theme.Typography.body)
-                    .foregroundStyle(Theme.Colors.primary)
-                    .fixedSize(horizontal: false, vertical: true)
-            } else {
-                Text("Unknown")
-                    .font(Theme.Typography.body)
-                    .foregroundStyle(Theme.Colors.secondary)
-            }
-        }
-    }
-}
 
 // MARK: - Modern Confidence Indicator
 struct ModernConfidenceIndicator: View {

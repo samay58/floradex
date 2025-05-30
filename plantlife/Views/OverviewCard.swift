@@ -1,12 +1,6 @@
 import SwiftUI
 
-// PreferenceKey to track scroll offset
-struct ScrollOffsetPreferenceKey: PreferenceKey {
-    static var defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = nextValue()
-    }
-}
+// ScrollOffsetPreferenceKey is already defined in DexGrid.swift
 
 struct OverviewCard: View, DexDetailCard {
     let id: Int = 0 // First card
