@@ -1,4 +1,14 @@
-# Xcode
+# Core env/local artifacts
+.env
+.DS_Store
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+sessions/
+*.log
+
+# Xcode / iOS
 build/
 DerivedData/
 *.xcodeproj/*swiftdoc
@@ -13,9 +23,6 @@ DerivedData/
 Package.resolved
 Package.pins
 
-# Secrets
+# Secrets (kept out of VCS)
 Secrets.xcconfig
 plantlife/Shared/Secrets.swift
-
-# macOS
-.DS_Store 
