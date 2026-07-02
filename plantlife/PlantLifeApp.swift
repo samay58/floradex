@@ -1,5 +1,7 @@
 import SwiftUI
 import SwiftData
+import FloradexKit
+import os
 
 @main
 struct PlantLifeApp: App {
@@ -29,6 +31,11 @@ struct PlantLifeApp: App {
             dexRepository = DexRepository(modelContext: modelContainer.mainContext)
             
             print("SwiftData ModelContainer, SpeciesRepository, and DexRepository initialized successfully.")
+
+            // Linkage proof for the FloradexKit package (rewrite phase 3);
+            // the hero-loop rebuild replaces this with real orchestrator use.
+            Logger(subsystem: "samayd.floradex", category: "rewrite")
+                .debug("FloradexKit linked; standard escalation steps: \(EscalationPolicy.standard.steps.count)")
 
         } catch {
             // If the container fails to initialize, it's a critical error.

@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		F9E4B701C344D0F568752510 /* FloradexKit in Frameworks */ = {isa = PBXBuildFile; productRef = BE37D0973E06CDE54B8FC9D9 /* FloradexKit */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		46F3109B2DD526E8003C8B8D /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -50,11 +54,15 @@
 		};
 		46F3109D2DD526E8003C8B8D /* plantlifeTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = plantlifeTests;
 			sourceTree = "<group>";
 		};
 		46F310A72DD526E8003C8B8D /* plantlifeUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = plantlifeUITests;
 			sourceTree = "<group>";
 		};
@@ -65,6 +73,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F9E4B701C344D0F568752510 /* FloradexKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -125,6 +134,7 @@
 			);
 			name = plantlife;
 			packageProductDependencies = (
+				BE37D0973E06CDE54B8FC9D9 /* FloradexKit */,
 			);
 			productName = plantlife;
 			productReference = 46F3108B2DD526E7003C8B8D /* plantlife.app */;
@@ -147,8 +157,6 @@
 				46F3109D2DD526E8003C8B8D /* plantlifeTests */,
 			);
 			name = plantlifeTests;
-			packageProductDependencies = (
-			);
 			productName = plantlifeTests;
 			productReference = 46F3109A2DD526E8003C8B8D /* plantlifeTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
@@ -170,8 +178,6 @@
 				46F310A72DD526E8003C8B8D /* plantlifeUITests */,
 			);
 			name = plantlifeUITests;
-			packageProductDependencies = (
-			);
 			productName = plantlifeUITests;
 			productReference = 46F310A42DD526E8003C8B8D /* plantlifeUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
@@ -210,7 +216,7 @@
 			mainGroup = 46F310822DD526E7003C8B8D;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				460404722DD721FE0032FA56 /* XCRemoteSwiftPackageReference "lottie-ios" */,
+				63BA81230F4E82CD9A3779FA /* XCLocalSwiftPackageReference "FloradexKit" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 46F3108C2DD526E7003C8B8D /* Products */;
@@ -338,7 +344,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.4;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
@@ -395,7 +401,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.4;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
@@ -434,6 +440,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_STRICT_CONCURRENCY = complete;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -467,6 +474,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = samayd.floradex;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_STRICT_CONCURRENCY = complete;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -479,7 +487,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.4;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = samayd.plantlifeTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -497,7 +505,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.4;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = samayd.plantlifeTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -581,16 +589,19 @@
 		};
 /* End XCConfigurationList section */
 
-/* Begin XCRemoteSwiftPackageReference section */
-		460404722DD721FE0032FA56 /* XCRemoteSwiftPackageReference "lottie-ios" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/airbnb/lottie-ios";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 4.5.1;
-			};
+/* Begin XCLocalSwiftPackageReference section */
+		63BA81230F4E82CD9A3779FA /* XCLocalSwiftPackageReference "FloradexKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = FloradexKit;
 		};
-/* End XCRemoteSwiftPackageReference section */
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		BE37D0973E06CDE54B8FC9D9 /* FloradexKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = FloradexKit;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 46F310832DD526E7003C8B8D /* Project object */;
 }
