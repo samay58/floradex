@@ -11,5 +11,9 @@
 	</dict>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>UIAppFonts</key>
+	<array>
+		<string>DepartureMono-Regular.otf</string>
+	</array>
 </dict>
 </plist>
