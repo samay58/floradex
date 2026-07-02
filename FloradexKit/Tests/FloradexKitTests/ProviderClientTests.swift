@@ -360,3 +360,54 @@ private func broker(_ provider: ProviderID, key: String = "test-key") -> StaticC
         }
     }
 }
+
+@Suite struct OpenAIDetailsProviderTests {
+    @Test func happyPathBuildsCareProfileAndStampsSource() async throws {
+        let host = "openai-details-happy.stub.test"
+        let outputText = #"{"commonName":"Swiss cheese plant","summary":"A hardy climber. Loves bright rooms.","sunlight":"Bright indirect","water":"Weekly","soil":"Well-draining","temperature":"18-27 C","bloomTime":null,"funFacts":["Its holes are called fenestrations."]}"#
+            .replacingOccurrences(of: "\"", with: "\\\"")
+        StubURLProtocol.register(host: host, status: 200, json: """
+        {"output": [{"type": "message", "content": [{"type": "output_text", "text": "\(outputText)"}]}]}
+        """)
+
+        let stamp = Date(timeIntervalSince1970: 1_700_000_000)
+        let provider = OpenAIDetailsProvider(
+            broker: broker(.visionReasoner),
+            session: StubURLProtocol.session,
+            endpoint: URL(string: "https://\(host)/v1/responses")!,
+            now: { stamp }
+        )
+        let content = try await provider.details(for: Species(latinName: "Monstera deliciosa"))
+
+        #expect(content.species.commonName == "Swiss cheese plant")
+        #expect(content.care.sunlight == "Bright indirect")
+        #expect(content.care.bloomTime == nil)
+        #expect(content.funFacts.count == 1)
+        #expect(content.source.generatedAt == stamp)
+
+        let capture = try #require(StubURLProtocol.capture(host: host))
+        let sentBody = try JSONSerialization.jsonObject(with: try #require(capture.body)) as? [String: Any]
+        #expect(sentBody?["model"] as? String == "gpt-5.4-nano")
+    }
+
+    @Test func garbageOutputThrowsInvalidResponse() async {
+        let host = "openai-details-garbage.stub.test"
+        StubURLProtocol.register(host: host, status: 200, json: """
+        {"output": [{"type": "message", "content": [{"type": "output_text", "text": "no json here"}]}]}
+        """)
+
+        let provider = OpenAIDetailsProvider(
+            broker: broker(.visionReasoner),
+            session: StubURLProtocol.session,
+            endpoint: URL(string: "https://\(host)/v1/responses")!
+        )
+        do {
+            _ = try await provider.details(for: Species(latinName: "Ficus lyrata"))
+            Issue.record("expected invalidResponse")
+        } catch let ProviderError.invalidResponse(message) {
+            #expect(message.contains("JSON"))
+        } catch {
+            Issue.record("expected invalidResponse, got \(error)")
+        }
+    }
+}

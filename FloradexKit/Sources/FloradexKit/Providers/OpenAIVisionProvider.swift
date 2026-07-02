@@ -51,44 +51,12 @@ public struct OpenAIVisionProvider: PlantIdentificationProvider {
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
         let (data, _) = try await http.execute(request, for: id)
-        let text = try outputText(from: data)
+        let text = try ResponsesPayload.outputText(from: data)
         let candidates = try parseCandidates(from: text)
         if candidates.isEmpty {
             throw ProviderError.noPlantDetected
         }
         return candidates
-    }
-
-    /// Extracts the assistant's text from a Responses API payload: the first
-    /// output_text content of the first message output item.
-    private func outputText(from data: Data) throws -> String {
-        struct Response: Decodable {
-            var output: [OutputItem]
-
-            struct OutputItem: Decodable {
-                var type: String
-                var content: [ContentItem]?
-            }
-
-            struct ContentItem: Decodable {
-                var type: String
-                var text: String?
-            }
-        }
-        let decoded: Response
-        do {
-            decoded = try JSONDecoder().decode(Response.self, from: data)
-        } catch {
-            throw ProviderError.invalidResponse("responses decode: \(error)")
-        }
-        for item in decoded.output where item.type == "message" {
-            for content in item.content ?? [] where content.type == "output_text" {
-                if let text = content.text {
-                    return text
-                }
-            }
-        }
-        throw ProviderError.invalidResponse("responses payload had no output_text")
     }
 
     /// The model is instructed to return bare JSON but may wrap it in prose;
