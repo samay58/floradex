@@ -24,9 +24,10 @@ struct DexGridView: View {
     @State private var showsList = false
     @State private var isSelecting = false
     @State private var selectedNumbers: Set<Int> = []
+    @State private var navigationPath = NavigationPath()
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             Group {
                 if entries.isEmpty {
                     emptyState
@@ -46,6 +47,16 @@ struct DexGridView: View {
                 }
             }
         }
+        #if DEBUG
+        // Screenshot and Maestro harness: FLORADEX_ENTRY=1 opens the first
+        // entry. Pairs with FLORADEX_TAB=dex.
+        .task {
+            if ProcessInfo.processInfo.environment["FLORADEX_ENTRY"] == "1",
+               let first = entries.first {
+                navigationPath.append(first.persistentModelID)
+            }
+        }
+        #endif
     }
 
     private var visibleEntries: [DexEntryV2] {

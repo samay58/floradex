@@ -2,9 +2,10 @@ import SwiftUI
 import SwiftData
 import FloradexKit
 
-/// Full entry screen: photo hero, taxonomy, care rendered only for fields
-/// that exist, field notes, and provenance. Long-form detail lives here so
-/// the reveal card never has to scroll.
+/// The full herbarium sheet: one continuous paper surface with the mounted
+/// photograph, taxonomy in serif, and ruled sections whose typed field
+/// labels render only for content that exists. Long-form detail lives here
+/// so the reveal card never has to scroll.
 struct EntryDetailView: View {
     @Bindable var entry: DexEntryV2
     let store: SwiftDataDexStore
@@ -16,7 +17,7 @@ struct EntryDetailView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading, spacing: Floradex.Space.l) {
                 hero
                 taxonomy
                 if let summary = entry.species?.summary, !summary.isEmpty {
@@ -32,9 +33,15 @@ struct EntryDetailView: View {
             .padding(.horizontal)
             .padding(.bottom, 32)
         }
-        .navigationTitle("#\(entry.number)")
+        .background(Color.floraPaper)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            ToolbarItem(placement: .principal) {
+                Text("#\(entry.number)")
+                    .font(.floraNumber(.tile))
+                    .foregroundStyle(Color.floraPixelInk)
+                    .accessibilityLabel("Number \(entry.number)")
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 Button(role: .destructive) {
                     confirmingDelete = true
@@ -63,38 +70,50 @@ struct EntryDetailView: View {
         }
     }
 
+    /// The mounted photograph, sprite plate tipped in at the corner.
     private var hero: some View {
         ZStack(alignment: .bottomTrailing) {
-            if let photo {
-                Image(uiImage: photo)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 260)
-                    .clipShape(RoundedRectangle(cornerRadius: 20))
-            } else {
-                RoundedRectangle(cornerRadius: 20)
-                    .fill(Color.floraGreen.opacity(0.1))
-                    .frame(height: 160)
-                    .overlay {
+            Group {
+                if let photo {
+                    Image(uiImage: photo)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 260)
+                        .clipShape(RoundedRectangle(cornerRadius: Floradex.Radius.plate - 1))
+                } else {
+                    ZStack {
+                        DitherField()
                         Image(systemName: "leaf.fill")
                             .font(.largeTitle)
-                            .foregroundStyle(Color.floraGreen.opacity(0.4))
+                            .foregroundStyle(Color.floraGreen.opacity(0.45))
                     }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 160)
+                    .clipShape(RoundedRectangle(cornerRadius: Floradex.Radius.plate - 1))
+                }
             }
+            .padding(5)
+            .background(.white, in: RoundedRectangle(cornerRadius: Floradex.Radius.plate))
+            .overlay(
+                RoundedRectangle(cornerRadius: Floradex.Radius.plate)
+                    .strokeBorder(Color.floraHairline, lineWidth: 1)
+            )
+            .shadow(color: .black.opacity(0.08), radius: 4, y: 2)
+
             EntrySpriteView(entry: entry, media: media)
                 .frame(width: 72, height: 72)
-                .padding(10)
+                .padding(Floradex.Space.m)
         }
     }
 
     private var taxonomy: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(entry.species?.commonName ?? entry.species?.latinName ?? "Unknown")
-                .font(.title2.weight(.semibold))
+                .font(.floraDisplayLarge)
             if let latin = entry.species?.latinName, entry.species?.commonName != nil {
                 Text(latin)
-                    .font(.subheadline.italic())
+                    .font(.floraLatin)
                     .foregroundStyle(.secondary)
             }
             if let family = entry.species?.family {
@@ -109,10 +128,10 @@ struct EntryDetailView: View {
                             .font(.caption)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 4)
-                            .background(.quaternary.opacity(0.6), in: Capsule())
+                            .overlay(Capsule().strokeBorder(Color.floraHairline, lineWidth: 1))
                     }
                 }
-                .padding(.top, 6)
+                .padding(.top, Floradex.Space.s)
             }
         }
     }
@@ -133,7 +152,7 @@ struct EntryDetailView: View {
                     ForEach(present, id: \.1) { icon, label, value in
                         HStack(alignment: .firstTextBaseline, spacing: 10) {
                             Image(systemName: icon)
-                                .foregroundStyle(Color.floraGreen)
+                                .foregroundStyle(.secondary)
                                 .frame(width: 22)
                             VStack(alignment: .leading, spacing: 1) {
                                 Text(label)
@@ -152,12 +171,12 @@ struct EntryDetailView: View {
     private var funFactsSection: some View {
         if let facts = entry.species?.funFacts, !facts.isEmpty {
             section("Fun facts") {
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: Floradex.Space.s) {
                     ForEach(facts, id: \.self) { fact in
-                        HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        HStack(alignment: .firstTextBaseline, spacing: Floradex.Space.s) {
                             Image(systemName: "sparkle")
                                 .font(.caption)
-                                .foregroundStyle(Color.floraGreen)
+                                .foregroundStyle(.secondary)
                             Text(fact)
                         }
                     }
@@ -210,14 +229,20 @@ struct EntryDetailView: View {
         return parts.joined(separator: " · ") + " · " + entry.createdAt.formatted(date: .abbreviated, time: .omitted)
     }
 
+    /// A ruled section with a typed field label: the herbarium sheet's
+    /// grammar, replacing stacked boxes with one continuous surface.
     private func section(_ title: String, @ViewBuilder content: () -> some View) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: Floradex.Space.s) {
+            Rectangle()
+                .fill(Color.floraHairline)
+                .frame(height: 1)
             Text(title)
-                .font(.headline)
+                .font(.caption.weight(.semibold))
+                .textCase(.uppercase)
+                .tracking(0.8)
+                .foregroundStyle(.secondary)
             content()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(14)
-        .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 14))
     }
 }
