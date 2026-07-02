@@ -9,11 +9,16 @@ Floradex is a SwiftUI iOS app (iOS 26 deployment target, Xcode 26) that identifi
 ## Commands
 
 ```bash
+# Kit logic tests (Swift Testing, runs on macOS, no simulator; the fastest check)
+cd FloradexKit && swift test
+
 # Build for simulator
 xcodebuild -project plantlife.xcodeproj -scheme floradex -sdk iphonesimulator build
 
-# Run all tests (destination must name an installed simulator; check `xcrun simctl list devices`)
-xcodebuild -project plantlife.xcodeproj -scheme floradex test -destination 'platform=iOS Simulator,name=iPhone 16'
+# App unit tests (destination must name an installed simulator; check `xcrun simctl list devices`)
+xcodebuild -project plantlife.xcodeproj -scheme floradex test \
+  -destination 'platform=iOS Simulator,name=iPhone 16' \
+  -only-testing:plantlifeTests -parallel-testing-enabled NO
 
 # Run a single test class or method
 xcodebuild -project plantlife.xcodeproj -scheme floradex test \
@@ -21,9 +26,13 @@ xcodebuild -project plantlife.xcodeproj -scheme floradex test \
   -only-testing:plantlifeTests/SwiftDataDexStoreTests/testDeleteRetiresTheNumberForever
 ```
 
+Always scope simulator test runs with `-only-testing:plantlifeTests`: the scheme's test action also includes `plantlifeUITests`, which is untouched Xcode template scaffolding until phase 7 makes it real.
+
 If XcodeBuildMCP tools are available, prefer them over raw xcodebuild.
 
-Machine note: `xcode-select` points at CommandLineTools, so prefix `xcodebuild`/`xcrun`/`swift` with `DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer` or they fail with a "requires Xcode" error.
+Machine notes:
+- `xcode-select` points at CommandLineTools, so prefix `xcodebuild`/`xcrun`/`swift` with `DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer` or they fail with a "requires Xcode" error.
+- The iOS simulator runtime disk image can be absent (purged under disk pressure on 2026-07-02). If `xcrun simctl runtime list` shows no images, reinstall with `xcodebuild -downloadPlatform iOS` (about 8GB) before any simulator work. Kit tests are unaffected.
 
 API keys are development environment variables (`KINDWISE_API_KEY`, `PLANTNET_API_KEY`, `OPENAI_API_KEY`) resolved through `CredentialBroker` at request time; there is no xcconfig path and nothing key-shaped in the repo. `FLORADEX_FIXTURES=1` runs the app with no keys at all.
 
@@ -46,7 +55,7 @@ Read `docs/rewrite-research/floradex-rewrite-spec.md` before any structural chan
 ## Rewrite status and rules
 
 - Done: phase 2 (dead code wave 1, test repair, iOS 26 crash fixes), phase 3 (project wiring, deployment target 26.0), phase 4 (Kit orchestrator + provider clients + hero loop UI), phase 5 (v2 schema + migration, new dex/entry surfaces, native TabView root, all legacy deleted), phase 6 (trust and correction states, Swift 6 flip via `scripts/flip_swift6.rb`).
-- Next: phase 7 (fixture assets, Maestro/XCUITest), phase 8 (polish incl. app icon and offline queue, proxy scaffold in `proxy/`).
+- Next: phase 7 (fixture assets, Maestro/XCUITest), phase 8 (polish and offline queue, proxy scaffold in `proxy/`; the app icon, originally phase 8, landed 2026-07-02).
 - Never hand-edit `project.pbxproj`; use `scripts/wire_floradexkit.rb` as the pattern (xcodeproj gem, checkpoint commit, line-by-line diff review, green build) for any further project mutations.
 - Warning budget: zero project warnings as of the app-icon fill on 2026-07-02; the only remaining build-log line is `appintentsmetadataprocessor` toolchain noise (`docs/rewrite-research/warning-baseline.md` started at 140). The count stays at zero, and new code merges with zero warnings.
 - Path note: `/Users/samaydhawan/floradex` is a symlink to this checkout, not a separate worktree.
