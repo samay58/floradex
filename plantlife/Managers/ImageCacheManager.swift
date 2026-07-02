@@ -198,31 +198,3 @@ class ImageCacheManager: ObservableObject {
     }
 }
 
-// MARK: - SwiftUI View Extension
-
-extension View {
-    func cachedImage(for entry: DexEntry) -> some View {
-        self.overlay(
-            CachedImageView(entry: entry)
-        )
-    }
-}
-
-struct CachedImageView: View {
-    let entry: DexEntry
-    @StateObject private var cacheManager = ImageCacheManager.shared
-    @State private var image: UIImage?
-    
-    var body: some View {
-        Group {
-            if let image = image {
-                Image(uiImage: image)
-                    .resizable()
-                    .interpolation(.none) // For pixel art
-            }
-        }
-        .onAppear {
-            image = cacheManager.image(for: entry)
-        }
-    }
-}

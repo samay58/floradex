@@ -194,121 +194,6 @@ struct FloatingLeaf: View {
     }
 }
 
-// MARK: - Interactive Camera Empty State
-
-struct CameraEmptyStateView: View {
-    @State private var showDemo = false
-    @State private var frameOpacity: [Double] = [0.3, 0.3, 0.3, 0.3]
-    
-    var body: some View {
-        VStack(spacing: Theme.Metrics.Padding.large) {
-            // Camera viewfinder illustration
-            ZStack {
-                RoundedRectangle(cornerRadius: Theme.Metrics.cornerRadiusMedium)
-                    .strokeBorder(Theme.Colors.systemFill, lineWidth: 2)
-                    .aspectRatio(4/3, contentMode: .fit)
-                    .frame(maxWidth: 300)
-                
-                // Corner brackets
-                ForEach(0..<4, id: \.self) { index in
-                    CameraFrameCorner(position: cornerPosition(for: index))
-                        .opacity(frameOpacity[index])
-                }
-                
-                if showDemo {
-                    // Demo plant silhouette
-                    Image(systemName: "leaf.fill")
-                        .font(.system(size: 60))
-                        .foregroundColor(Theme.Colors.primaryGreen.opacity(0.5))
-                        .transition(.scale.combined(with: .opacity))
-                }
-            }
-            .onTapGesture {
-                showDemo.toggle()
-                if showDemo {
-                    animateFrameDemo()
-                }
-            }
-            
-            VStack(spacing: Theme.Metrics.Padding.small) {
-                Text("Frame Your Plant")
-                    .font(Theme.Typography.headline)
-                    .foregroundColor(Theme.Colors.textPrimary)
-                
-                Text("Tap to see ideal framing")
-                    .font(Theme.Typography.caption)
-                    .foregroundColor(Theme.Colors.textSecondary)
-            }
-        }
-    }
-    
-    private func cornerPosition(for index: Int) -> UnitPoint {
-        switch index {
-        case 0: return .topLeading
-        case 1: return .topTrailing
-        case 2: return .bottomLeading
-        case 3: return .bottomTrailing
-        default: return .center
-        }
-    }
-    
-    private func animateFrameDemo() {
-        for i in 0..<4 {
-            DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 0.1) {
-                withAnimation(AnimationConstants.quickSpring) {
-                    frameOpacity[i] = 1.0
-                }
-                
-                HapticManager.shared.tick()
-            }
-        }
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-            withAnimation(AnimationConstants.smoothSpring) {
-                frameOpacity = [0.3, 0.3, 0.3, 0.3]
-                showDemo = false
-            }
-        }
-    }
-}
-
-struct CameraFrameCorner: View {
-    let position: UnitPoint
-    
-    var body: some View {
-        Path { path in
-            let size: CGFloat = 30
-            
-            switch position {
-            case .topLeading:
-                path.move(to: CGPoint(x: 0, y: size))
-                path.addLine(to: CGPoint(x: 0, y: 0))
-                path.addLine(to: CGPoint(x: size, y: 0))
-            case .topTrailing:
-                path.move(to: CGPoint(x: -size, y: 0))
-                path.addLine(to: CGPoint(x: 0, y: 0))
-                path.addLine(to: CGPoint(x: 0, y: size))
-            case .bottomLeading:
-                path.move(to: CGPoint(x: 0, y: -size))
-                path.addLine(to: CGPoint(x: 0, y: 0))
-                path.addLine(to: CGPoint(x: size, y: 0))
-            case .bottomTrailing:
-                path.move(to: CGPoint(x: -size, y: 0))
-                path.addLine(to: CGPoint(x: 0, y: 0))
-                path.addLine(to: CGPoint(x: 0, y: -size))
-            default:
-                break
-            }
-        }
-        .stroke(Theme.Colors.primaryGreen, lineWidth: 3)
-        .frame(width: 300, height: 225)
-        .position(
-            x: position == .topLeading || position == .bottomLeading ? 15 : 285,
-            y: position == .topLeading || position == .topTrailing ? 15 : 210
-        )
-    }
-}
-
 // MARK: - Motion Manager
 
 class MotionManager: ObservableObject {
@@ -349,9 +234,6 @@ struct EmptyStateView_Previews: PreviewProvider {
             
             DynamicEmptyStateView(type: .noSearchResults)
                 .previewDisplayName("No Search Results")
-            
-            CameraEmptyStateView()
-                .previewDisplayName("Camera Empty State")
         }
     }
 }

@@ -19,13 +19,10 @@ struct LiquidTabBar: View {
             HStack(spacing: 0) {
                 ForEach(Array(tabs.enumerated()), id: \.offset) { index, tab in
                     Button(action: {
-                        print("[LiquidTabBar] Tab button tapped: \(tab.label) at index \(index)")
-                        print("[LiquidTabBar] Current selectedTab: \(selectedTab), new index: \(index)")
                         withAnimation(AnimationConstants.signatureSpring) {
                             selectedTab = index
                         }
                         HapticManager.shared.tick()
-                        print("[LiquidTabBar] selectedTab after update: \(selectedTab)")
                     }) {
                         TabBarItem(
                             icon: tab.icon,
@@ -48,7 +45,6 @@ struct LiquidTabBar: View {
             )
             .onAppear {
                 safeAreaInsets = geometry.safeAreaInsets
-                print("[LiquidTabBar] Appeared with safe area insets: \(safeAreaInsets)")
             }
         }
     }
@@ -154,9 +150,6 @@ struct LiquidTabView<Content: View>: View {
             LiquidTabBar(selectedTab: $selection, tabs: tabs)
                 .frame(height: 80)
                 .zIndex(1000) // Ensure tab bar is on top
-        }
-        .onAppear {
-            print("[LiquidTabView] Appeared with selection: \(selection)")
         }
     }
 }

@@ -2,8 +2,8 @@ import Foundation
 import SwiftData
 
 @Model
-final class SpeciesDetails: Identifiable, Codable, Sendable {
-    @Attribute(.unique) var latinName: String // latinName acts as ID
+final class SpeciesDetails: Identifiable, Sendable {
+    @Attribute(.unique) var latinName: String
     var commonName: String?
     var summary: String?
     var growthHabit: String?
@@ -15,8 +15,6 @@ final class SpeciesDetails: Identifiable, Codable, Sendable {
     var funFacts: [String]?
     var lastUpdated: Date
 
-    // SwiftData requires an initializer.
-    // We'll provide a default one that matches the old struct's memberwise initializer.
     init(latinName: String,
          commonName: String? = nil,
          summary: String? = nil,
@@ -40,94 +38,16 @@ final class SpeciesDetails: Identifiable, Codable, Sendable {
         self.funFacts = funFacts
         self.lastUpdated = lastUpdated
     }
-    
-    // The 'id' property for Identifiable can be derived from latinName.
-    // Or, if you prefer a stable UUID, you could add a separate `let id: UUID = UUID()` property.
-    // For now, let's assume latinName is sufficient for Identifiable needs.
+
     var id: String { latinName }
-
-    var missingFieldRatio: Double {
-        let total = 9.0 // fields excluding id/latin/lastUpdated
-        let missing = [commonName, summary, growthHabit, sunlight, water, soil, temperature, bloomTime, funFacts?.first].filter { $0 == nil }.count
-        return Double(missing) / total
-    }
-
-    static func empty(latin: String) -> SpeciesDetails {
-        SpeciesDetails(latinName: latin, lastUpdated: Date())
-    }
-
-    // The 'with(funFacts:)' method is less common with classes as you can mutate properties directly.
-    // However, if you prefer an immutable style update, it can be kept or adapted.
-    // For now, let's remove it, as direct mutation is idiomatic for classes.
-    // If needed, we can re-add a similar method or use direct property assignment.
-
-    // MARK: - Codable
-    enum CodingKeys: String, CodingKey {
-        case latinName, commonName, summary, growthHabit, sunlight, water, soil, temperature, bloomTime, funFacts, lastUpdated
-    }
-
-    // Decodable
-    required convenience init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        let latinName = try container.decode(String.self, forKey: .latinName)
-        let commonName = try container.decodeIfPresent(String.self, forKey: .commonName)
-        let summary = try container.decodeIfPresent(String.self, forKey: .summary)
-        let growthHabit = try container.decodeIfPresent(String.self, forKey: .growthHabit)
-        let sunlight = try container.decodeIfPresent(String.self, forKey: .sunlight)
-        let water = try container.decodeIfPresent(String.self, forKey: .water)
-        let soil = try container.decodeIfPresent(String.self, forKey: .soil)
-        let temperature = try container.decodeIfPresent(String.self, forKey: .temperature)
-        let bloomTime = try container.decodeIfPresent(String.self, forKey: .bloomTime)
-        let funFacts = try container.decodeIfPresent([String].self, forKey: .funFacts)
-        let lastUpdated = try container.decodeIfPresent(Date.self, forKey: .lastUpdated) ?? Date()
-
-        self.init(latinName: latinName,
-                       commonName: commonName,
-                       summary: summary,
-                       growthHabit: growthHabit,
-                       sunlight: sunlight,
-                       water: water,
-                       soil: soil,
-                       temperature: temperature,
-                       bloomTime: bloomTime,
-                       funFacts: funFacts,
-                       lastUpdated: lastUpdated)
-    }
-
-    // Encodable
-    func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(latinName, forKey: .latinName)
-        try container.encodeIfPresent(commonName, forKey: .commonName)
-        try container.encodeIfPresent(summary, forKey: .summary)
-        try container.encodeIfPresent(growthHabit, forKey: .growthHabit)
-        try container.encodeIfPresent(sunlight, forKey: .sunlight)
-        try container.encodeIfPresent(water, forKey: .water)
-        try container.encodeIfPresent(soil, forKey: .soil)
-        try container.encodeIfPresent(temperature, forKey: .temperature)
-        try container.encodeIfPresent(bloomTime, forKey: .bloomTime)
-        try container.encodeIfPresent(funFacts, forKey: .funFacts)
-        try container.encode(lastUpdated, forKey: .lastUpdated)
-    }
 }
 
-// Sunlight requirement parsed from the free-text `sunlight` field.
-// Moved here from a deleted gauge view; PlantDetailsView and
-// DetailContentViews render from it.
-enum SunlightLevel: String, CaseIterable, Identifiable {
-    case fullSun = "Full Sun"
-    case partialSun = "Partial Sun"
-    case shade = "Shade"
-
-    var id: String { self.rawValue }
-
-    var iconName: String {
-        switch self {
-        case .fullSun: return "sun.max.fill"
-        case .partialSun: return "cloud.sun.fill"
-        case .shade: return "cloud.fill"
-        }
-    }
+/// Sunlight requirement parsed from the free-text `sunlight` field;
+/// PlantDetailsView renders its gauge from this.
+enum SunlightLevel {
+    case fullSun
+    case partialSun
+    case shade
 
     var gaugeValue: Int {
         switch self {
@@ -138,110 +58,61 @@ enum SunlightLevel: String, CaseIterable, Identifiable {
     }
 }
 
-// MARK: - Parsed Properties for Gauges
+// MARK: - Parsed properties for the legacy detail gauges
+
 extension SpeciesDetails {
-    // Additional properties that might exist from various data sources
+    // Fields the old detail screen renders but no current source populates;
+    // the v2 schema either supplies or drops them.
     var family: String? { nil }
     var nativeRegion: String? { nil }
     var careDifficulty: Int? { nil }
+
     var minTemp: Int? {
-        if let range = parsedTemperatureRange {
-            return Int(range.lowerBound)
-        }
-        return nil
+        parsedTemperatureRange.map { Int($0.lowerBound) }
     }
+
     var maxTemp: Int? {
-        if let range = parsedTemperatureRange {
-            return Int(range.upperBound)
-        }
-        return nil
+        parsedTemperatureRange.map { Int($0.upperBound) }
     }
-    var parsedDescription: String? { summary }
-    var sunlightLevel: Int? {
-        switch parsedSunlightLevel {
-        case .shade: return 1
-        case .partialSun: return 3
-        case .fullSun: return 5
-        }
-    }
-    var difficultyLevel: Int? { careDifficulty }
+
     var parsedSunlightLevel: SunlightLevel {
-        guard let sunlightString = sunlight?.lowercased() else { return .partialSun } // Default
+        guard let sunlightString = sunlight?.lowercased() else { return .partialSun }
         if sunlightString.contains("full sun") {
             return .fullSun
-        } else if sunlightString.contains("partial") {
-            return .partialSun
         } else if sunlightString.contains("shade") {
             return .shade
         }
-        return .partialSun // Default
+        return .partialSun
     }
 
-    var parsedWaterRequirement: Double { // Normalized 0.0 to 1.0
-        guard let waterString = water?.lowercased() else { return 0.5 } // Default
+    /// Normalized 0.0 to 1.0.
+    var parsedWaterRequirement: Double {
+        guard let waterString = water?.lowercased() else { return 0.5 }
         if waterString.contains("high") || waterString.contains("keep moist") || waterString.contains("frequent") {
             return 0.8
-        } else if waterString.contains("moderate") || waterString.contains("average") {
-            return 0.5
         } else if waterString.contains("low") || waterString.contains("dry out") || waterString.contains("infrequent") {
             return 0.2
         }
-        return 0.5 // Default
+        return 0.5
     }
 
     var parsedTemperatureRange: ClosedRange<Double>? {
         guard let tempString = temperature else { return nil }
 
-        // Regex to find numbers, can be X, X-Y, X - Y
         let regex = try! NSRegularExpression(pattern: #"(\d+(?:\.\d+)?)"#)
         let nsRange = NSRange(tempString.startIndex..<tempString.endIndex, in: tempString)
-        let matches = regex.matches(in: tempString, options: [], range: nsRange)
-        
-        let numbers = matches.compactMap { match -> Double? in
-            if let range = Range(match.range(at: 1), in: tempString) {
+        let numbers = regex.matches(in: tempString, options: [], range: nsRange)
+            .compactMap { match -> Double? in
+                guard let range = Range(match.range(at: 1), in: tempString) else { return nil }
                 return Double(String(tempString[range]))
             }
-            return nil
-        }
 
         if numbers.count == 1 {
-            return numbers[0]...numbers[0] // Or perhaps a small range like numbers[0]-2...numbers[0]+2
+            return numbers[0]...numbers[0]
         } else if numbers.count >= 2 {
-            let sortedNumbers = numbers.sorted()
-            return sortedNumbers[0]...sortedNumbers[1]
+            let sorted = numbers.sorted()
+            return sorted[0]...sorted[1]
         }
-        
-        return nil // Default if parsing fails
-    }
-    
-    // Example for a "current" temperature if we had such data. For now, ThermoRangeView might not use it.
-    // var currentTemperature: Double? { return nil }
-
-
-    var parsedSoilPH: Double? { // Normalized 0.0 to 1.0 for pH 0-14 scale
-        guard let soilString = soil?.lowercased() else { return 0.5 } // Default to neutral pH 7
-
-        // Regex to find pH values like "pH 6.0", "ph 5.5-6.5"
-        let regex = try! NSRegularExpression(pattern: #"ph\s*(\d+(?:\.\d+)?)(?:\s*-\s*(\d+(?:\.\d+)?))?"#)
-        let nsRange = NSRange(soilString.startIndex..<soilString.endIndex, in: soilString)
-        
-        if let match = regex.firstMatch(in: soilString, options: [], range: nsRange) {
-            var phValues: [Double] = []
-            if let range1 = Range(match.range(at: 1), in: soilString), let val1 = Double(String(soilString[range1])) {
-                phValues.append(val1)
-            }
-            if match.numberOfRanges > 2, let range2 = Range(match.range(at: 2), in: soilString), let val2 = Double(String(soilString[range2])) {
-                phValues.append(val2)
-            }
-
-            if phValues.isEmpty {
-                return 0.5 // Neutral
-            }
-            
-            let averagePh = phValues.reduce(0, +) / Double(phValues.count)
-            return (averagePh / 14.0).clamped(to: 0.0...1.0) // Normalize to 0-14 scale
-        }
-        
-        return 0.5 // Default to neutral pH 7 if no pH found
+        return nil
     }
 }

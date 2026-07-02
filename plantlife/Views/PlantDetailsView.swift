@@ -296,43 +296,6 @@ struct PlantDetailsView: View {
                 .opacity(appeared ? 1 : 0)
                 
                 Spacer()
-                
-                // Action buttons
-                HStack(spacing: 12) {
-                    Button(action: { 
-                        HapticManager.shared.buttonTap()
-                        /* TODO: Favorite */ 
-                    }) {
-                        Image(systemName: "heart")
-                            .font(.system(size: 18))
-                            .foregroundStyle(.white)
-                            .frame(width: 40, height: 40)
-                            .background(
-                                Circle()
-                                    .fill(.ultraThinMaterial)
-                            )
-                    }
-                    .scaleEffect(appeared ? 1 : 0.8)
-                    .opacity(appeared ? 1 : 0)
-                    .animation(AnimationConstants.signatureSpring.delay(0.1), value: appeared)
-                    
-                    Button(action: { 
-                        HapticManager.shared.buttonTap()
-                        /* TODO: Share */ 
-                    }) {
-                        Image(systemName: "square.and.arrow.up")
-                            .font(.system(size: 18))
-                            .foregroundStyle(.white)
-                            .frame(width: 40, height: 40)
-                            .background(
-                                Circle()
-                                    .fill(.ultraThinMaterial)
-                            )
-                    }
-                    .scaleEffect(appeared ? 1 : 0.8)
-                    .opacity(appeared ? 1 : 0)
-                    .animation(AnimationConstants.signatureSpring.delay(0.15), value: appeared)
-                }
             }
             .padding()
             .padding(.top, 44) // Account for status bar
@@ -809,15 +772,3 @@ struct DexDetailView: View {
     }
 }
 
-#if DEBUG
-struct PlantDetailsView_Previews: PreviewProvider {
-    static var previews: some View {
-        let container = try! ModelContainer(for: SpeciesDetails.self, DexEntry.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
-        
-        NavigationStack {
-            PlantDetailsView(entry: PreviewHelper.sampleDexEntry)
-        }
-        .modelContainer(container)
-    }
-}
-#endif

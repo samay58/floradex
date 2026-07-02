@@ -3,20 +3,21 @@ import SwiftData
 
 @Model
 final class DexEntry: Sendable {
-    @Attribute(.unique) var id: Int      // Floradex number, e.g., 1, 2, 3
+    /// Permanent dex number; deletions leave gaps, never reassigned.
+    @Attribute(.unique) var id: Int
     var createdAt: Date
-    var latinName: String                // Foreign Key to SpeciesDetails
-    var snapshot: Data?                  // Original JPEG image, scaled to ≤1MB
-    var sprite: Data?                    // Generated 64x64 PNG sprite
+    /// Joins SpeciesDetails by string; the v2 schema makes this a real relationship.
+    var latinName: String
+    var snapshot: Data?
+    var sprite: Data?
     var tags: [String]
     var notes: String?
     var spriteGenerationFailed: Bool
-    
-    // Relationship to species details for common name
+
+    /// Always nil in the v1 schema (no relationship yet); collection search
+    /// references it, so it stays until v2.
     var commonName: String? {
-        // This would normally come from a relationship to SpeciesDetails
-        // For now, return nil as we don't have the relationship set up
-        return nil
+        nil
     }
 
     init(id: Int,

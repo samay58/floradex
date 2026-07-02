@@ -26,3 +26,4 @@ Package.pins
 # Secrets (kept out of VCS)
 Secrets.xcconfig
 plantlife/Shared/Secrets.swift
+.specstory/

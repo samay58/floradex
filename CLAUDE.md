@@ -4,14 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Floradex is a SwiftUI iOS app (iOS 17+, Xcode 15+) that identifies plants from photos and saves pixel-art "dex" entries with care details. Naming quirk: the Xcode project, app target, and Swift module are all named `plantlife`, but the only scheme is `floradex`. Use `-scheme floradex` in xcodebuild commands (the README's `-scheme plantlife` example is stale) and `@testable import plantlife` in tests.
+Floradex is a SwiftUI iOS app (iOS 26 deployment target, Xcode 26) that identifies plants from photos and saves pixel-art "dex" entries with care details. Naming quirk: the Xcode project, app target, and Swift module are all named `plantlife`, but the only scheme is `floradex`. Use `-scheme floradex` in xcodebuild commands and `@testable import plantlife` in tests.
 
 ## Commands
 
 ```bash
-# One-time setup: API keys (app runs without them in local-only mode)
-cp Secrets.xcconfig.example Secrets.xcconfig   # fill OPENAI_API_KEY, PLANTNET_API_KEY; optional TREFLE/PERENUAL
-
 # Build for simulator
 xcodebuild -project plantlife.xcodeproj -scheme floradex -sdk iphonesimulator build
 
@@ -22,14 +19,11 @@ xcodebuild -project plantlife.xcodeproj -scheme floradex test -destination 'plat
 xcodebuild -project plantlife.xcodeproj -scheme floradex test \
   -destination 'platform=iOS Simulator,name=iPhone 16' \
   -only-testing:plantlifeTests/DexRepositoryTests/testAddEntryAndAutoIncrementId
-
-# Check which API providers are enabled from env vars
-swift examples/provider_quick_check.swift
 ```
 
 If XcodeBuildMCP tools are available, prefer them over raw xcodebuild.
 
-Secrets resolution (`plantlife/Shared/Secrets.swift`): environment variables first, then build-time values from `Secrets.xcconfig`. Never commit `Secrets.xcconfig` or real keys.
+API keys are development environment variables (`KINDWISE_API_KEY`, `PLANTNET_API_KEY`, `OPENAI_API_KEY`) resolved through `CredentialBroker` at request time; there is no xcconfig path and nothing key-shaped in the repo. `FLORADEX_FIXTURES=1` runs the app with no keys at all.
 
 ## Architecture (rewrite in progress, phases 2 through 4 landed)
 
@@ -43,12 +37,12 @@ Read `docs/rewrite-research/floradex-rewrite-spec.md` before any structural chan
 
 **Legacy surfaces still standing** (die in phase 5 remainder): `FloradexCollectionView`/`DexGrid`/`DexCard`, entry-only `PlantDetailsView`, `LiquidTabBar` root, v1 `@Model` classes (`DexEntry`, `SpeciesDetails`, joined by `latinName` string), `@MainActor` repositories in `DataHandling/`. The v2 schema (real relationship, persisted number ledger, media on disk) is specced but not yet built.
 
-**Tests**: Kit logic in Swift Testing (94 tests, `swift test`); app unit tests in XCTest on simulator (`-only-testing:plantlifeTests`, use `-parallel-testing-enabled NO`). The 15-case fixture corpus in `FloradexKitFixtures` replays through the real escalation engine and orchestrator.
+**Tests**: Kit logic in Swift Testing (96 tests, `swift test`); app unit tests in XCTest on simulator (`-only-testing:plantlifeTests`, use `-parallel-testing-enabled NO`). The 16-case fixture corpus in `FloradexKitFixtures` replays through the real escalation engine and orchestrator.
 
 ## Rewrite status and rules
 
 - Done: phase 2 (dead code wave 1, test repair, iOS 26 crash fixes), phase 3 (project wiring, deployment target 26.0, strict-concurrency warnings), phase 4 (Kit orchestrator + provider clients + hero loop UI, old pipeline deleted in wave 2).
 - Next: phase 5 remainder (SwiftData v2 schema + migration test, new dex grid/detail surfaces, native TabView root), phase 6 (trust states, `SWIFT_VERSION` 6 flip), phase 7 (fixture assets, Maestro/XCUITest), phase 8 (polish, proxy scaffold in `proxy/`).
 - Never hand-edit `project.pbxproj`; use `scripts/wire_floradexkit.rb` as the pattern (xcodeproj gem, checkpoint commit, line-by-line diff review, green build) for any further project mutations.
-- Warning budget: 102 at last build (`docs/rewrite-research/warning-baseline.md` started at 140); the count must only shrink, and new code merges with zero warnings.
+- Warning budget: 78 at last build (`docs/rewrite-research/warning-baseline.md` started at 140); the count must only shrink, and new code merges with zero warnings.
 - Path note: `/Users/samaydhawan/floradex` is a symlink to this checkout, not a separate worktree.

@@ -141,7 +141,6 @@ struct DexGrid: View {
             } else {
                 // Navigate to details
                 HapticManager.shared.buttonTap()
-                print("DexGrid: Tapped entry \(entry.id) - \(entry.latinName)")
                 selectedEntry = entry
             }
         }
@@ -399,37 +398,3 @@ struct ScrollOffsetPreferenceKey: PreferenceKey {
     }
 }
 
-#if DEBUG
-struct DexGrid_Previews: PreviewProvider {
-    static var previews: some View {
-        let previewContainer: ModelContainer = {
-            do {
-                let config = ModelConfiguration(isStoredInMemoryOnly: true)
-                let container = try ModelContainer(for: DexEntry.self, configurations: config)
-                
-                // Insert sample entries
-                for entry in PreviewHelper.sampleDexEntries {
-                    container.mainContext.insert(entry)
-                }
-                
-                try container.mainContext.save()
-                return container
-            } catch {
-                fatalError("Failed to create model container for preview: \(error)")
-            }
-        }()
-        
-        @State var selectionMode = false
-        
-        return NavigationStack {
-            DexGrid(
-                entries: PreviewHelper.sampleDexEntries,
-                onRefresh: { print("Refresh triggered") },
-                onDelete: nil,
-                isSelectionMode: .constant(false)
-            )
-        }
-        .modelContainer(previewContainer)
-    }
-}
-#endif 

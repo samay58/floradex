@@ -6,6 +6,8 @@ Command: `xcodebuild -project plantlife.xcodeproj -scheme floradex -destination 
 
 **Total: 140 warnings.** This number must only shrink. New code merges with zero warnings; the legacy carriers below are scheduled for deletion in phases 4 and 5, which is how most of this count disappears.
 
+Checkpoints since the snapshot (same command): 102 after the phase 4/5 waves; 78 after the de-sloppify pass (InfoCardView and SkeletonView deleted with eleven other dead files, repositories rewritten). Remaining carriers are AnimationConstants (dies with LiquidTabBar in phase 5), the asset catalog, and the SwiftData keypath-Sendability class on the v1 models (dies with the v2 schema).
+
 Top carriers by file:
 
 | Count | File |

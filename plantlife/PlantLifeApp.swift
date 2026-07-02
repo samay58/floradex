@@ -29,8 +29,6 @@ struct PlantLifeApp: App {
             // Initialize the SpeciesRepository with the main context from the container
             speciesRepository = SpeciesRepository(modelContext: modelContainer.mainContext)
             dexRepository = DexRepository(modelContext: modelContainer.mainContext)
-            
-            print("SwiftData ModelContainer, SpeciesRepository, and DexRepository initialized successfully.")
 
             // Linkage proof for the FloradexKit package (rewrite phase 3);
             // the hero-loop rebuild replaces this with real orchestrator use.
