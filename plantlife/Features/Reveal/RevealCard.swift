@@ -71,7 +71,7 @@ struct RevealCard: View {
     private var spriteSlot: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 12)
-                .fill(Theme.Colors.primaryGreen.opacity(0.12))
+                .fill(Color.floraGreen.opacity(0.12))
                 .frame(width: 56, height: 56)
             if let sprite = model.spriteImage {
                 Image(uiImage: sprite)
@@ -82,7 +82,7 @@ struct RevealCard: View {
                     .transition(.scale.combined(with: .opacity))
             } else {
                 Image(systemName: "leaf.fill")
-                    .foregroundStyle(Theme.Colors.primaryGreen.opacity(0.45))
+                    .foregroundStyle(Color.floraGreen.opacity(0.45))
             }
         }
     }
@@ -311,13 +311,13 @@ private struct CommittedContent: View {
         HStack {
             Label("#\(number.value)", systemImage: "sparkles")
                 .font(.title3.weight(.bold))
-                .foregroundStyle(Theme.Colors.primaryGreen)
+                .foregroundStyle(Color.floraGreen)
             Spacer()
             Button("Done") {
                 model.discardTapped()
             }
             .buttonStyle(.borderedProminent)
-            .tint(Theme.Colors.primaryGreen)
+            .tint(Color.floraGreen)
         }
     }
 }

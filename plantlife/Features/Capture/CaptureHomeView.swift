@@ -150,7 +150,7 @@ private struct FallbackBackground: View {
         VStack(spacing: 12) {
             Image(systemName: symbol)
                 .font(.system(size: 44))
-                .foregroundStyle(Theme.Colors.primaryGreen)
+                .foregroundStyle(Color.floraGreen)
             Text(title)
                 .font(.title3.weight(.semibold))
             Text(message)
@@ -161,7 +161,7 @@ private struct FallbackBackground: View {
             if let settingsAction {
                 Button("Open Settings", action: settingsAction)
                     .buttonStyle(.borderedProminent)
-                    .tint(Theme.Colors.primaryGreen)
+                    .tint(Color.floraGreen)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

@@ -202,7 +202,7 @@ private struct DexTile: View {
                 .frame(width: 96, height: 96)
             Text("#\(entry.number)")
                 .font(.headline.monospacedDigit())
-                .foregroundStyle(Theme.Colors.primaryGreen)
+                .foregroundStyle(Color.floraGreen)
             Text(entry.species.map { $0.commonName ?? $0.latinName } ?? "Unknown")
                 .font(.caption)
                 .lineLimit(1)
@@ -213,7 +213,7 @@ private struct DexTile: View {
         .overlay(alignment: .topTrailing) {
             if let isSelected {
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .foregroundStyle(isSelected ? Theme.Colors.primaryGreen : .secondary)
+                    .foregroundStyle(isSelected ? Color.floraGreen : .secondary)
                     .padding(8)
             }
         }
@@ -241,10 +241,10 @@ private struct DexRow: View {
             Spacer()
             Text("#\(entry.number)")
                 .font(.subheadline.monospacedDigit())
-                .foregroundStyle(Theme.Colors.primaryGreen)
+                .foregroundStyle(Color.floraGreen)
             if let isSelected {
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .foregroundStyle(isSelected ? Theme.Colors.primaryGreen : .secondary)
+                    .foregroundStyle(isSelected ? Color.floraGreen : .secondary)
             }
         }
     }
@@ -261,7 +261,7 @@ struct EntrySpriteView: View {
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 10)
-                .fill(Theme.Colors.primaryGreen.opacity(0.1))
+                .fill(Color.floraGreen.opacity(0.1))
             if let image {
                 Image(uiImage: image)
                     .resizable()
@@ -270,7 +270,7 @@ struct EntrySpriteView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 10))
             } else {
                 Image(systemName: "leaf.fill")
-                    .foregroundStyle(Theme.Colors.primaryGreen.opacity(0.45))
+                    .foregroundStyle(Color.floraGreen.opacity(0.45))
             }
         }
         .task(id: entry.spriteVersion) {

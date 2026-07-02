@@ -74,12 +74,12 @@ struct EntryDetailView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 20))
             } else {
                 RoundedRectangle(cornerRadius: 20)
-                    .fill(Theme.Colors.primaryGreen.opacity(0.1))
+                    .fill(Color.floraGreen.opacity(0.1))
                     .frame(height: 160)
                     .overlay {
                         Image(systemName: "leaf.fill")
                             .font(.largeTitle)
-                            .foregroundStyle(Theme.Colors.primaryGreen.opacity(0.4))
+                            .foregroundStyle(Color.floraGreen.opacity(0.4))
                     }
             }
             EntrySpriteView(entry: entry, media: media)
@@ -133,7 +133,7 @@ struct EntryDetailView: View {
                     ForEach(present, id: \.1) { icon, label, value in
                         HStack(alignment: .firstTextBaseline, spacing: 10) {
                             Image(systemName: icon)
-                                .foregroundStyle(Theme.Colors.primaryGreen)
+                                .foregroundStyle(Color.floraGreen)
                                 .frame(width: 22)
                             VStack(alignment: .leading, spacing: 1) {
                                 Text(label)
@@ -157,7 +157,7 @@ struct EntryDetailView: View {
                         HStack(alignment: .firstTextBaseline, spacing: 8) {
                             Image(systemName: "sparkle")
                                 .font(.caption)
-                                .foregroundStyle(Theme.Colors.primaryGreen)
+                                .foregroundStyle(Color.floraGreen)
                             Text(fact)
                         }
                     }

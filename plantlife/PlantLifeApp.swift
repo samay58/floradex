@@ -25,16 +25,7 @@ struct PlantLifeApp: App {
 
     var body: some Scene {
         WindowGroup {
-            #if DEBUG
-            // Phase A design comparison harness; see Features/DesignLab.
-            if ProcessInfo.processInfo.environment["FLORADEX_DESIGN_LAB"] == "1" {
-                DesignLabView()
-            } else {
-                RootTabView(store: store, media: media)
-            }
-            #else
             RootTabView(store: store, media: media)
-            #endif
         }
         .modelContainer(modelContainer)
     }
@@ -76,6 +67,6 @@ struct RootTabView: View {
                 ProfileView()
             }
         }
-        .tint(Theme.Colors.primaryGreen)
+        .tint(Color.floraGreen)
     }
 }

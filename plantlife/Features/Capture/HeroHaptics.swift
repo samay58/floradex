@@ -8,11 +8,13 @@ enum HeroHaptics {
     private static let shutterImpact = UIImpactFeedbackGenerator(style: .medium)
     private static let stageSelection = UISelectionFeedbackGenerator()
     private static let outcome = UINotificationFeedbackGenerator()
+    private static let stampImpact = UIImpactFeedbackGenerator(style: .rigid)
 
     static func prepare() {
         shutterImpact.prepare()
         stageSelection.prepare()
         outcome.prepare()
+        stampImpact.prepare()
     }
 
     static func shutter() {
@@ -28,6 +30,13 @@ enum HeroHaptics {
     static func saveSuccess() {
         outcome.notificationOccurred(.success)
         outcome.prepare()
+    }
+
+    /// The dex number landing: one decisive hit, distinct from the two-tap
+    /// success pattern, because a stamp strikes once.
+    static func stamp() {
+        stampImpact.impactOccurred()
+        stampImpact.prepare()
     }
 
     static func undo() {
