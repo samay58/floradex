@@ -36,7 +36,6 @@ final class CaptureFlowModel {
     private var identificationTask: Task<Void, Never>?
     private var undoTask: Task<Void, Never>?
     private var detailsTask: Task<Void, Never>?
-    private var currentPayload: ImagePayload?
 
     init(
         camera: CameraSession = CameraSession(),
@@ -129,12 +128,6 @@ final class CaptureFlowModel {
         details = nil
         spriteImage = nil
         duplicateOfNumber = nil
-        let sized = image.resized(maxSide: 1024)
-        guard let payload = sized.jpegData(compressionQuality: 0.85) else {
-            logger.error("could not encode capture payload")
-            return
-        }
-        currentPayload = ImagePayload(format: .jpeg, data: payload)
         send(.shutterPressed(CaptureID()))
     }
 
@@ -182,12 +175,11 @@ final class CaptureFlowModel {
             spriteImage = nil
             duplicateOfNumber = nil
             undoDeadline = nil
-            currentPayload = nil
         }
     }
 
     private func startIdentification(_ captureID: CaptureID) {
-        guard let payload = currentPayload else {
+        guard let image = frozenImage else {
             send(.identificationFailed(.cancelled))
             return
         }
@@ -198,8 +190,14 @@ final class CaptureFlowModel {
                 self.handle(event)
             }
         }
-        identificationTask = Task { [orchestrator] in
-            _ = await orchestrator.identify(payload, onEvent: onEvent)
+        // Detached so the JPEG encode of a full-size capture never contends
+        // with the shutter's optimistic freeze-frame on the main actor.
+        identificationTask = Task.detached(priority: .userInitiated) { [orchestrator] in
+            guard let data = image.resized(maxSide: 1024).jpegData(compressionQuality: 0.85) else {
+                onEvent(.failed(.cancelled))
+                return
+            }
+            _ = await orchestrator.identify(ImagePayload(format: .jpeg, data: data), onEvent: onEvent)
         }
     }
 
@@ -273,8 +271,12 @@ final class CaptureFlowModel {
                 let stored = image.resized(maxSide: 256).pngData() ?? data
                 try await self?.dexRepository.updateSprite(for: entryID, spriteData: stored)
                 await MainActor.run { [weak self] in
-                    self?.spriteImage = image
-                    self?.recorder.record(.spriteShown)
+                    // The card may already be showing a later capture; a slow
+                    // sprite must not paint onto it. Persistence above stands.
+                    guard let self, case .committed(_, let number) = self.state,
+                          number.value == entryID else { return }
+                    self.spriteImage = image
+                    self.recorder.record(.spriteShown)
                 }
             } catch {
                 try? await self?.dexRepository.markSpriteGenerationFailed(for: entryID)

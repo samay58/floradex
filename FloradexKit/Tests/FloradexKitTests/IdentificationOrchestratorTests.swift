@@ -95,13 +95,20 @@ private final class EventCollector: Sendable {
                 #expect(result.species.latinName == topLatinName, "\(fixture.id): wrong top candidate")
                 #expect(result.band == .unsure, "\(fixture.id): should band unsure")
 
-            case .failure:
+            case .failure(let expectedFailure) where expectedFailure == .noPlantDetected:
                 guard case .finished(let reason, let result) = terminal else {
                     Issue.record("\(fixture.id): expected finished(noCandidates), got \(terminal)")
                     continue
                 }
                 #expect(reason == .noCandidates, "\(fixture.id): expected no candidates")
                 #expect(result == nil, "\(fixture.id): expected no result")
+
+            case .failure(let expectedFailure):
+                guard case .failed(let failure) = terminal else {
+                    Issue.record("\(fixture.id): expected failed(\(expectedFailure)), got \(terminal)")
+                    continue
+                }
+                #expect(failure == expectedFailure, "\(fixture.id): wrong failure")
 
             case .queuedOffline:
                 guard case .finished(let reason, _) = terminal else {
@@ -155,6 +162,41 @@ private final class EventCollector: Sendable {
             return
         }
         #expect(failure == .credentialMissing(.kindwise))
+    }
+
+    @Test func allInfrastructureFailuresSurfaceAsProvidersUnavailable() async {
+        let providers: [any PlantIdentificationProvider] = [
+            ScriptedIdentificationProvider(id: .kindwise, script: [.failure(.network("connection reset"), delay: .zero)]),
+            ScriptedIdentificationProvider(id: .plantNet, script: [.hang]),
+            ScriptedIdentificationProvider(id: .visionReasoner, script: [.failure(.invalidResponse("HTTP 500"), delay: .zero)]),
+        ]
+        let orchestrator = IdentificationOrchestrator(providers: providers, policy: shortStandardPolicy())
+        let terminal = await orchestrator.identify(testImage)
+
+        guard case .failed(let failure) = terminal else {
+            Issue.record("expected a failed event, got \(terminal)")
+            return
+        }
+        #expect(failure == .providersUnavailable)
+    }
+
+    @Test func anEmptyCandidateListIsAProviderVerdictNotAnOutage() async {
+        // One provider judged the image (empty list); the rest erred. That
+        // must stay "no plant found", not "providers down".
+        let providers: [any PlantIdentificationProvider] = [
+            ScriptedIdentificationProvider(id: .kindwise, script: [.failure(.network("connection reset"), delay: .zero)]),
+            ScriptedIdentificationProvider(id: .plantNet, script: [.candidates([], delay: .zero)]),
+            ScriptedIdentificationProvider(id: .visionReasoner, script: [.failure(.timeout, delay: .zero)]),
+        ]
+        let orchestrator = IdentificationOrchestrator(providers: providers, policy: shortStandardPolicy())
+        let terminal = await orchestrator.identify(testImage)
+
+        guard case .finished(let reason, let result) = terminal else {
+            Issue.record("expected a finished event, got \(terminal)")
+            return
+        }
+        #expect(reason == .noCandidates)
+        #expect(result == nil)
     }
 
     @Test func progressEventsArriveInOrderAndLastMatchesTerminal() async {

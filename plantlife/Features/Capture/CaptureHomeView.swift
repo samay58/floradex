@@ -6,6 +6,7 @@ import PhotosUI
 /// flight. Permission denial is a designed state with a Settings route.
 struct CaptureHomeView: View {
     let model: CaptureFlowModel
+    @Environment(\.scenePhase) private var scenePhase
     @State private var pickerItem: PhotosPickerItem?
 
     var body: some View {
@@ -41,6 +42,18 @@ struct CaptureHomeView: View {
                    let image = UIImage(data: data) {
                     model.imported(image)
                 }
+            }
+        }
+        // Release the camera promptly in the background (privacy indicator,
+        // battery) instead of waiting for the system to suspend it.
+        .onChange(of: scenePhase) { _, phase in
+            switch phase {
+            case .active:
+                Task { await model.startCamera() }
+            case .background:
+                Task { await model.camera.stop() }
+            default:
+                break
             }
         }
     }

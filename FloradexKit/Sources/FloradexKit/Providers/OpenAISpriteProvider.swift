@@ -33,11 +33,10 @@ public struct OpenAISpriteProvider: SpriteGenerationProvider {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("Bearer \(credential.apiKey)", forHTTPHeaderField: "Authorization")
 
-        let displayName = species.commonName ?? species.latinName
         let body = RequestBody(
             model: model,
             prompt: """
-            A simple pixel art sprite of a \(displayName) plant (\(species.latinName)) in retro \
+            A simple pixel art sprite of a \(species.displayName) plant (\(species.latinName)) in retro \
             8-bit video game style: limited color palette, centered, transparent background, \
             cute and iconic, suitable for a plant collection game.
             """

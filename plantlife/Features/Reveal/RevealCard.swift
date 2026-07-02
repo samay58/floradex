@@ -59,6 +59,7 @@ struct RevealCard: View {
         case .committed:
             Text("Added to your Floradex")
                 .font(.headline)
+                .fixedSize(horizontal: false, vertical: true)
         case .failed(_, let failure):
             Text(failure.displayMessage)
                 .font(.headline)
@@ -302,12 +303,6 @@ private struct FailedContent: View {
             .buttonStyle(.bordered)
             Spacer()
         }
-    }
-}
-
-extension Species {
-    var displayName: String {
-        commonName ?? latinName
     }
 }
 

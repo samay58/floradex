@@ -18,7 +18,6 @@ public struct ProviderID: RawRepresentable, Hashable, Sendable, Codable, Express
     public static let visionReasoner: ProviderID = "openai.vision-reasoner"
     public static let localML: ProviderID = "local.core-ml"
     public static let spriteGenerator: ProviderID = "openai.gpt-image"
-    public static let onDeviceCareText: ProviderID = "apple.foundation-models"
 }
 
 public struct IdentificationCandidate: Hashable, Sendable, Codable {

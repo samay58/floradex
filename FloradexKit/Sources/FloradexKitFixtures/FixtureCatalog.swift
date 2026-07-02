@@ -82,6 +82,17 @@ public enum FixtureCatalog {
             expected: .failure(.noPlantDetected)
         ),
         FixtureCase(
+            id: "providers-down",
+            category: .providersDown,
+            summary: "Every provider fails on infrastructure (network, hang, 500); must not read as no plant found.",
+            scripts: [
+                .kindwise: [.failure(.network("connection reset"), delay: .zero)],
+                .plantNet: [.hang],
+                .visionReasoner: [.failure(.invalidResponse("HTTP 500: upstream"), delay: .zero)],
+            ],
+            expected: .failure(.providersUnavailable)
+        ),
+        FixtureCase(
             id: "provider-timeout",
             category: .providerTimeout,
             summary: "Primary hangs; secondary answers confidently.",

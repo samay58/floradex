@@ -6,8 +6,8 @@ import FloradexKitFixtures
 @Suite struct FixtureCatalogTests {
     private let catalog = FixtureCatalog.standard
 
-    @Test func containsAllFifteenCases() {
-        #expect(catalog.count == 15)
+    @Test func containsAllSixteenCases() {
+        #expect(catalog.count == 16)
     }
 
     @Test func idsAreUnique() {
@@ -83,6 +83,8 @@ import FloradexKitFixtures
                 #expect(result?.band == .unsure, "\(fixture.id): should band unsure")
 
             case .failure:
+                // The engine reports noCandidates either way; the orchestrator
+                // layers the no-plant vs providers-down distinction on top.
                 #expect(reason == .noCandidates, "\(fixture.id): expected no candidates")
                 #expect(result == nil)
 

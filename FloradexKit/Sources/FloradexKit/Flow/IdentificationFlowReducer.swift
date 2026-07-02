@@ -37,23 +37,19 @@ public struct IdentificationFlowReducer: Sendable {
             }
             return (.identifying(id, bestSoFar: result), effects)
 
+        // The orchestrator records `identificationSettled` itself; effects
+        // here stay UI-perceived (what the user saw, when).
         case (.identifying(let id, _), .identificationFinished(let reason, let result)):
             if let result {
                 return (
                     .provisional(id, result),
                     [
                         .recordMetric(.provisionalShown),
-                        .recordMetric(.identificationSettled(reason)),
                         .startUndoWindow(id, configuration.undoWindow),
                     ]
                 )
             }
-            switch reason {
-            case .queuedOffline:
-                return (.failed(id, .offline), [.recordMetric(.identificationSettled(reason))])
-            default:
-                return (.failed(id, .noPlantDetected), [.recordMetric(.identificationSettled(reason))])
-            }
+            return (.failed(id, reason == .queuedOffline ? .offline : .noPlantDetected), [])
 
         case (.identifying(let id, _), .identificationFailed(let failure)):
             return (.failed(id, failure), [])

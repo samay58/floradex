@@ -11,6 +11,11 @@ public struct Species: Hashable, Sendable, Codable {
         self.family = family
     }
 
+    /// What the UI and prompts lead with: common name when known.
+    public var displayName: String {
+        commonName ?? latinName
+    }
+
     /// Comparison key used by the agreement scorer so that provider spelling
     /// variants and author citations don't split the vote.
     public var normalizedKey: String {

@@ -15,8 +15,3 @@ public protocol SpriteGenerationProvider: Sendable {
     /// Returns encoded PNG data for the pixel-art sprite.
     func sprite(for species: Species) async throws -> Data
 }
-
-public protocol CareTextProvider: Sendable {
-    var id: ProviderID { get }
-    func careText(for species: Species) async throws -> CareProfile
-}

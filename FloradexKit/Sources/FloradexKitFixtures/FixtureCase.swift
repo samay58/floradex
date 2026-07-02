@@ -7,6 +7,7 @@ public enum FixtureCategory: String, CaseIterable, Hashable, Sendable {
     case blurredPhoto
     case duplicatePlant
     case noPlantInImage
+    case providersDown
     case providerTimeout
     case providerDisagreement
     case offlineCapture

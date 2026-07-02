@@ -33,11 +33,12 @@ public struct AgreementScorer: Sendable {
                 return lhs.weight > rhs.weight
             }
 
-        let winner = weighted[0]
+        guard let winner = weighted.first,
+              let bestOfWinner = winner.members.max(by: { $0.confidence < $1.confidence }) else {
+            return nil
+        }
         let totalWeight = weighted.reduce(0.0) { $0 + $1.weight }
         let dissent = totalWeight > 0 ? 1.0 - (winner.weight / totalWeight) : 0.0
-
-        let bestOfWinner = winner.members.max { $0.confidence < $1.confidence }!
         let winnerConfidence = winner.members.reduce(0.0) { $0 + $1.confidence } / Double(winner.members.count)
 
         let providersOverall = Set(candidates.map(\.provider))

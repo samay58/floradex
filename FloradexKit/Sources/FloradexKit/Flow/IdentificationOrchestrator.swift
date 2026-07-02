@@ -122,18 +122,28 @@ public actor IdentificationOrchestrator {
         }
     }
 
+    /// Empty-handed runs are only "no plant found" if a provider actually
+    /// judged the image (returned a candidate list, even empty, or said
+    /// no-plant). All-infrastructure failures surface as
+    /// `providersUnavailable`; a missing key wins over everything.
     private func terminalEvent(
         reason: FinishReason,
         result: IdentificationResult?,
         outcomes: [ProviderOutcome]
     ) -> OrchestratorEvent {
-        if result == nil {
-            for outcome in outcomes {
-                if case .failed(_, .credentialMissing(let provider)) = outcome {
-                    return .failed(.credentialMissing(provider))
-                }
+        guard result == nil else { return .finished(reason, result) }
+
+        var aProviderJudgedTheImage = outcomes.isEmpty || reason == .queuedOffline
+        for outcome in outcomes {
+            switch outcome {
+            case .failed(_, .credentialMissing(let provider)):
+                return .failed(.credentialMissing(provider))
+            case .candidates, .failed(_, .noPlantDetected):
+                aProviderJudgedTheImage = true
+            case .failed, .timedOut:
+                break
             }
         }
-        return .finished(reason, result)
+        return aProviderJudgedTheImage ? .finished(reason, nil) : .failed(.providersUnavailable)
     }
 }
