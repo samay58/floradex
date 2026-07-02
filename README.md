@@ -47,5 +47,5 @@ Launch with `FLORADEX_FIXTURES=1` and `FLORADEX_AUTORUN=1` (as `SIMCTL_CHILD_` v
 ## Notes
 
 - Requires Xcode 26 and iOS 26.
-- A rewrite is in progress on `rewrite/foundation`; `docs/rewrite-research/` holds the spec and status.
+- The rewrite through phase 6 (architecture, hero loop, v2 schema, Swift 6, app icon) is merged to `main`; phases 7 and 8 (fixtures/UI tests, polish and proxy) continue on `rewrite/foundation`. `docs/rewrite-research/` holds the spec and status.
 - No telemetry. Perceived-quality metrics are local os_signpost events.
