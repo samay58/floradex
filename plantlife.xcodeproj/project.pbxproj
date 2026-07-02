@@ -54,15 +54,11 @@
 		};
 		46F3109D2DD526E8003C8B8D /* plantlifeTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = plantlifeTests;
 			sourceTree = "<group>";
 		};
 		46F310A72DD526E8003C8B8D /* plantlifeUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = plantlifeUITests;
 			sourceTree = "<group>";
 		};

@@ -25,9 +25,11 @@ If XcodeBuildMCP tools are available, prefer them over raw xcodebuild.
 
 API keys are development environment variables (`KINDWISE_API_KEY`, `PLANTNET_API_KEY`, `OPENAI_API_KEY`) resolved through `CredentialBroker` at request time; there is no xcconfig path and nothing key-shaped in the repo. `FLORADEX_FIXTURES=1` runs the app with no keys at all.
 
+The shared scheme (`plantlife.xcodeproj/xcshareddata/xcschemes/floradex.xcscheme`) carries `FLORADEX_FIXTURES`, `FLORADEX_AUTORUN`, and `FLORADEX_TAB` as disabled environment variables; enable them in the scheme editor for Xcode runs, or pass them as `SIMCTL_CHILD_`-prefixed variables when launching via `simctl launch`. API keys stay out of that file deliberately (it is tracked).
+
 ## Architecture (rewrite in progress, phases 2 through 6 landed)
 
-Read `docs/rewrite-research/floradex-rewrite-spec.md` before any structural change; it defines the architecture, the 8-phase plan, and what is deliberately deferred. `docs/rewrite-research/floradex-modern-ios-research.md` holds the platform decisions with sources. Branch: `rewrite/foundation`.
+Read `docs/rewrite-research/floradex-rewrite-spec.md` before any structural change; it defines the architecture, the 8-phase plan, and what is deliberately deferred. `docs/rewrite-research/floradex-modern-ios-research.md` holds the platform decisions with sources. `docs/rewrite-research/WHERE-WE-LEFT-OFF.md` is the session handoff doc: current state, verify-before-building commands, and decisions parked with the user. Read it before resuming rewrite work and keep it updated when a session materially advances a phase. Branch: `rewrite/foundation`.
 
 **The seam**: `FloradexKit/` is a local Swift package (no SwiftUI/UIKit) linked into the app target. Everything is Swift 6: the app target builds with `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor` (deliberately off-main types are marked `nonisolated`); the test target is Swift 6 without the default (XCTestCase's nonisolated lifecycle forbids it) and isolates test classes explicitly. Domain logic, policies, the hero-loop reducer, the orchestrator actor, provider API clients, and the fixture catalog live there. Verify with `cd FloradexKit && swift test` (runs on macOS, no simulator). Boundary rule: needs SwiftUI or live hardware → `plantlife/`; otherwise → the Kit.
 
