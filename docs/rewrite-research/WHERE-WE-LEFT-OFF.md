@@ -1,10 +1,17 @@
 # Where we left off
 
-Updated 2026-07-02, end of the de-sloppify plus phase 5 session. Branch `rewrite/foundation`.
+Updated 2026-07-02, end of the de-sloppify plus phase 5 and 6 session. Branch `rewrite/foundation`.
 
 ## State in one paragraph
 
-Phases 0 through 5 are done: the de-sloppify pass below, then the full phase 5 remainder in the same session. The v2 SwiftData schema is live (real DexEntry-to-SpeciesRecord relationship, persisted DexLedger, media on disk keyed by mediaID), with an in-place migration from v1 that froze numbers, tombstoned gaps, and exported image blobs to disk; the migration ran for real against the simulator's existing store and its seeded test is green. The hero loop commits through `SwiftDataDexStore` (the Kit's `DexStore` seam); the new `DexGridView` and `EntryDetailView` replace the legacy collection subtree; the root is a native `TabView`. Nothing legacy remains: no repositories, no LiquidTabBar, no AnimationConstants, no v1 model files outside the versioned schema. FloradexKit has 100 green Swift Testing tests; the app suite is the seeded migration test plus six store tests, all green on simulator. Warnings are down to 20 (from 140 at baseline, 102 at the session start). The full loop was re-verified on the iOS 26.5 simulator with screenshots at each stage.
+Phases 0 through 6 are done (phase 6 minus the offline queue, which moved to phase 8 with a note in the spec): the de-sloppify pass below, then the full phase 5 remainder in the same session. The v2 SwiftData schema is live (real DexEntry-to-SpeciesRecord relationship, persisted DexLedger, media on disk keyed by mediaID), with an in-place migration from v1 that froze numbers, tombstoned gaps, and exported image blobs to disk; the migration ran for real against the simulator's existing store and its seeded test is green. The hero loop commits through `SwiftDataDexStore` (the Kit's `DexStore` seam); the new `DexGridView` and `EntryDetailView` replace the legacy collection subtree; the root is a native `TabView`. Nothing legacy remains: no repositories, no LiquidTabBar, no AnimationConstants, no v1 model files outside the versioned schema. FloradexKit has 101 green Swift Testing tests; the app suite is the seeded migration test plus six store tests, all green on simulator under Swift 6. Warnings are down to 15 (from 140 at baseline, 102 at the session start), every one of them the missing app-icon assets. The full loop was re-verified on the iOS 26.5 simulator with screenshots at each stage, before and after the Swift 6 flip.
+
+## Phase 6 specifics worth knowing
+
+- Trust states on the reveal card: raw confidence behind a tap on the badge, a "2 of 3 sources agree" line for multi-provider results, correction cancel and free-text override, honest offline and credential-missing copy.
+- `scripts/flip_swift6.rb` flipped SWIFT_VERSION to 6.0 everywhere and set `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor` on the app target only; XCTestCase's nonisolated lifecycle rejects the default, so the test target isolates classes explicitly and uses `setUp() async throws`.
+- Deliberately off-main types are marked `nonisolated`: `CameraPreviewSource`, `PhotoCaptureDelegate`, `UIImage.resized`, `MediaLocations`.
+- The keypath-Sendability warning class vanished under Swift 6, as the baseline doc predicted. Warnings: 15, all missing app-icon assets plus one toolchain line; zero Swift source warnings.
 
 ## Phase 5 specifics worth knowing
 
@@ -36,7 +43,7 @@ Phases 0 through 5 are done: the de-sloppify pass below, then the full phase 5 r
 
 ## Next, in order
 
-**Phase 6** (per the spec): trust states in the UI (banded confidence surfaced honestly, disagreement line, correction flow completion) and the `SWIFT_VERSION` 6 flip; verify the SwiftData keypath-Sendability warning class actually clears under Swift 6 mode. Then phase 7 (fixture assets, Maestro/XCUITest) and phase 8 (polish including app icon and reveal-transition tightening, proxy scaffold). The committed execution prompt (`floradex-rewrite-execution-prompt.md`) still describes these accurately.
+**Phase 7** (per the spec): fixture corpus materialization (deterministic photo assets and recorded payloads behind the catalog), an XCUITest smoke of the hero path, and Maestro flows if it installs cleanly. Then phase 8: polish (app icon set kills the last 15 warnings, reveal-transition tightening, frame pacing on device), the offline capture queue (moved from phase 6), and the Cloudflare Workers + App Attest proxy scaffold. The committed execution prompt (`floradex-rewrite-execution-prompt.md`) still describes these accurately.
 
 ## Deferred decisions parked with Samay
 
@@ -47,7 +54,7 @@ Phases 0 through 5 are done: the de-sloppify pass below, then the full phase 5 r
 ## Verify before building
 
 ```bash
-cd FloradexKit && swift test                        # expect 100 green
+cd FloradexKit && swift test                        # expect 101 green
 xcodebuild -project plantlife.xcodeproj -scheme floradex \
   -destination 'platform=iOS Simulator,name=Floradex-Sim' build-for-testing
 xcodebuild ... test-without-building -only-testing:plantlifeTests \

@@ -11,7 +11,7 @@ final class FloradexMigrationTests: XCTestCase {
     private var storeURL: URL!
     private var mediaRoot: URL!
 
-    override func setUpWithError() throws {
+    override func setUp() async throws {
         workDirectory = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
         try FileManager.default.createDirectory(at: workDirectory, withIntermediateDirectories: true)
         storeURL = workDirectory.appending(path: "floradex.store")
@@ -19,7 +19,7 @@ final class FloradexMigrationTests: XCTestCase {
         FloradexMigrationPlan.mediaRoot = mediaRoot
     }
 
-    override func tearDownWithError() throws {
+    override func tearDown() async throws {
         FloradexMigrationPlan.mediaRoot = MediaLocations.root
         try? FileManager.default.removeItem(at: workDirectory)
     }

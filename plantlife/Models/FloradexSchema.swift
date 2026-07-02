@@ -3,7 +3,7 @@ import SwiftData
 
 /// Media lives on disk, keyed by each entry's `mediaID`; only that key is
 /// persisted, so container-path changes across reinstalls can't orphan files.
-enum MediaLocations {
+nonisolated enum MediaLocations {
     static var root: URL {
         URL.applicationSupportDirectory.appending(path: "FloradexMedia", directoryHint: .isDirectory)
     }

@@ -2,7 +2,9 @@ import UIKit
 
 extension UIImage {
     /// Returns a down-scaled copy with the longest side equal to `maxSide` (if needed).
-    func resized(maxSide: CGFloat) -> UIImage {
+    /// UIGraphicsImageRenderer is thread-safe; the payload encoder calls this
+    /// off the main actor.
+    nonisolated func resized(maxSide: CGFloat) -> UIImage {
         let longest = max(size.width, size.height)
         guard longest > maxSide else { return self }
         let scale = maxSide / longest

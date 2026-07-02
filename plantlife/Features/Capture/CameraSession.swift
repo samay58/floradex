@@ -4,7 +4,7 @@ import Foundation
 /// Hands the capture session to the preview layer across isolation domains.
 /// AVCaptureSession is documented thread-safe for the operations used here
 /// (configuration happens inside the actor; the preview layer only renders).
-struct CameraPreviewSource: @unchecked Sendable {
+nonisolated struct CameraPreviewSource: @unchecked Sendable {
     let session: AVCaptureSession
 }
 
@@ -92,7 +92,7 @@ actor CameraSession {
 /// Bridges the delegate callback to a continuation. Retained by the session
 /// actor until the capture completes; the callback arrives on the photo
 /// output's queue, hence the unchecked-Sendable contract.
-private final class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate, @unchecked Sendable {
+private nonisolated final class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate, @unchecked Sendable {
     private var continuation: CheckedContinuation<Data, Error>?
     private let onFinish: @Sendable () -> Void
 

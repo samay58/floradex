@@ -8,7 +8,7 @@ final class SwiftDataDexStoreTests: XCTestCase {
     private var container: ModelContainer!
     private var store: SwiftDataDexStore!
 
-    override func setUpWithError() throws {
+    override func setUp() async throws {
         let schema = Schema(versionedSchema: FloradexSchemaV2.self)
         container = try ModelContainer(
             for: schema,

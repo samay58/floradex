@@ -25,11 +25,11 @@ If XcodeBuildMCP tools are available, prefer them over raw xcodebuild.
 
 API keys are development environment variables (`KINDWISE_API_KEY`, `PLANTNET_API_KEY`, `OPENAI_API_KEY`) resolved through `CredentialBroker` at request time; there is no xcconfig path and nothing key-shaped in the repo. `FLORADEX_FIXTURES=1` runs the app with no keys at all.
 
-## Architecture (rewrite in progress, phases 2 through 5 landed)
+## Architecture (rewrite in progress, phases 2 through 6 landed)
 
 Read `docs/rewrite-research/floradex-rewrite-spec.md` before any structural change; it defines the architecture, the 8-phase plan, and what is deliberately deferred. `docs/rewrite-research/floradex-modern-ios-research.md` holds the platform decisions with sources. Branch: `rewrite/foundation`.
 
-**The seam**: `FloradexKit/` is a local Swift package (Swift 6 mode, no SwiftUI/UIKit) linked into the app target. Domain logic, policies, the hero-loop reducer, the orchestrator actor, provider API clients, and the fixture catalog live there. Verify with `cd FloradexKit && swift test` (runs on macOS, no simulator). Boundary rule: needs SwiftUI or live hardware → `plantlife/`; otherwise → the Kit.
+**The seam**: `FloradexKit/` is a local Swift package (no SwiftUI/UIKit) linked into the app target. Everything is Swift 6: the app target builds with `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor` (deliberately off-main types are marked `nonisolated`); the test target is Swift 6 without the default (XCTestCase's nonisolated lifecycle forbids it) and isolates test classes explicitly. Domain logic, policies, the hero-loop reducer, the orchestrator actor, provider API clients, and the fixture catalog live there. Verify with `cd FloradexKit && swift test` (runs on macOS, no simulator). Boundary rule: needs SwiftUI or live hardware → `plantlife/`; otherwise → the Kit.
 
 **Hero loop** (`plantlife/Features/`): `CaptureHomeView` (Identify tab) → `CameraSession` actor (pre-warm, responsive capture) → `CaptureFlowModel` (`@Observable`, executes effects only; all sequencing lives in the Kit's `IdentificationFlowReducer`) → `IdentificationOrchestrator` actor drives the data-driven `EscalationPolicy` over providers (Kindwise, Pl@ntNet, OpenAI vision reasoner) → staged `RevealCard` with undo window → commit assigns the dex number (monotonic, never reused; deletes leave gaps). `FLORADEX_FIXTURES=1` + `FLORADEX_AUTORUN=1` run the whole loop on a simulator with canned providers and no keys.
 
@@ -37,12 +37,12 @@ Read `docs/rewrite-research/floradex-rewrite-spec.md` before any structural chan
 
 **Persistence (v2, phase 5)**: `plantlife/Models/FloradexSchema.swift` holds both versioned schemas; `FloradexMigrationPlan` migrates v1 stores in place (numbers freeze, gaps become ledger tombstones, image blobs export to disk). `SwiftDataDexStore` implements the Kit's `DexStore` seam over `DexEntryV2`/`SpeciesRecord`/`DexLedger` and is the schema's single writer. Media lives under `MediaLocations.root` keyed by each entry's `mediaID` through the Kit's `MediaPathPolicy`/`FileMediaStore`. Collection surfaces are `Features/Dex/DexGridView` (grid, list escape hatch, search, sort, batch delete) and `Features/Entry/EntryDetailView`; the root is a native `TabView` in `PlantLifeApp.swift` (`FLORADEX_TAB=dex` preselects the collection in DEBUG). No legacy surfaces remain.
 
-**Tests**: Kit logic in Swift Testing (100 tests, `swift test`); app unit tests in XCTest on simulator (`-only-testing:plantlifeTests`, use `-parallel-testing-enabled NO`): the seeded v1-to-v2 migration test plus the SwiftData store suite. The 16-case fixture corpus in `FloradexKitFixtures` replays through the real escalation engine and orchestrator.
+**Tests**: Kit logic in Swift Testing (101 tests, `swift test`); app unit tests in XCTest on simulator (`-only-testing:plantlifeTests`, use `-parallel-testing-enabled NO`): the seeded v1-to-v2 migration test plus the SwiftData store suite. The 16-case fixture corpus in `FloradexKitFixtures` replays through the real escalation engine and orchestrator.
 
 ## Rewrite status and rules
 
-- Done: phase 2 (dead code wave 1, test repair, iOS 26 crash fixes), phase 3 (project wiring, deployment target 26.0, strict-concurrency warnings), phase 4 (Kit orchestrator + provider clients + hero loop UI), phase 5 (v2 schema + migration, new dex/entry surfaces, native TabView root, all legacy deleted).
-- Next: phase 6 (trust states, `SWIFT_VERSION` 6 flip), phase 7 (fixture assets, Maestro/XCUITest), phase 8 (polish, proxy scaffold in `proxy/`).
+- Done: phase 2 (dead code wave 1, test repair, iOS 26 crash fixes), phase 3 (project wiring, deployment target 26.0), phase 4 (Kit orchestrator + provider clients + hero loop UI), phase 5 (v2 schema + migration, new dex/entry surfaces, native TabView root, all legacy deleted), phase 6 (trust and correction states, Swift 6 flip via `scripts/flip_swift6.rb`).
+- Next: phase 7 (fixture assets, Maestro/XCUITest), phase 8 (polish incl. app icon and offline queue, proxy scaffold in `proxy/`).
 - Never hand-edit `project.pbxproj`; use `scripts/wire_floradexkit.rb` as the pattern (xcodeproj gem, checkpoint commit, line-by-line diff review, green build) for any further project mutations.
-- Warning budget: 20 at last build (`docs/rewrite-research/warning-baseline.md` started at 140); the count must only shrink, and new code merges with zero warnings.
+- Warning budget: 15 at last build, all of them the missing app-icon assets plus one line of toolchain noise; there are zero Swift source warnings (`docs/rewrite-research/warning-baseline.md` started at 140). The count must only shrink, and new code merges with zero warnings.
 - Path note: `/Users/samaydhawan/floradex` is a symlink to this checkout, not a separate worktree.
