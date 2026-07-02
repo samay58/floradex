@@ -11,11 +11,13 @@ public struct OpenAISpriteProvider: SpriteGenerationProvider {
     private let endpoint: URL
     private let model: String
 
+    /// Default model is pinned to gpt-image-1: gpt-image-2 rejects
+    /// `background: transparent`, and transparency is the sprite identity.
     public init(
         broker: any CredentialBroker,
         session: URLSession? = nil,
         endpoint: URL = URL(string: "https://api.openai.com/v1/images/generations")!,
-        model: String = "gpt-image-2"
+        model: String = "gpt-image-1"
     ) {
         self.broker = broker
         self.http = ProviderHTTP(

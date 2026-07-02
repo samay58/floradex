@@ -337,7 +337,7 @@ private func broker(_ provider: ProviderID, key: String = "test-key") -> StaticC
 
         let capture = try #require(StubURLProtocol.capture(host: host))
         let sentBody = try JSONSerialization.jsonObject(with: try #require(capture.body)) as? [String: Any]
-        #expect(sentBody?["model"] as? String == "gpt-image-2")
+        #expect(sentBody?["model"] as? String == "gpt-image-1")
         #expect(sentBody?["background"] as? String == "transparent")
         #expect(sentBody?["output_format"] as? String == "png")
         let prompt = sentBody?["prompt"] as? String ?? ""

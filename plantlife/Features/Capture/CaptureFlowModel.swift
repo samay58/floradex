@@ -232,11 +232,17 @@ final class CaptureFlowModel {
 
         detailsTask?.cancel()
         detailsTask = Task { [weak self, detailsProvider] in
-            guard let content = try? await detailsProvider.details(for: species) else { return }
-            await MainActor.run { [weak self] in
-                guard let self else { return }
-                self.details = content
-                self.store.updateDetails(content)
+            do {
+                let content = try await detailsProvider.details(for: species)
+                await MainActor.run { [weak self] in
+                    guard let self else { return }
+                    self.details = content
+                    self.store.updateDetails(content)
+                }
+            } catch {
+                await MainActor.run { [weak self] in
+                    self?.logger.error("details for \(species.latinName, privacy: .public): \(String(describing: error), privacy: .public)")
+                }
             }
         }
     }
@@ -287,7 +293,9 @@ final class CaptureFlowModel {
                 }
             } catch {
                 await MainActor.run { [weak self] in
-                    try? self?.store.markSpriteFailed(for: entry.number)
+                    guard let self else { return }
+                    self.logger.error("sprite for #\(entry.number.value): \(String(describing: error), privacy: .public)")
+                    try? self.store.markSpriteFailed(for: entry.number)
                 }
             }
         }
