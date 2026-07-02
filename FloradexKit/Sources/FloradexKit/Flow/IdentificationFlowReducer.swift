@@ -92,6 +92,11 @@ public struct IdentificationFlowReducer: Sendable {
         case (.failed(let id, _), .discarded):
             return (.idle, [.discardMedia(id)])
 
+        // Dismissing a committed card returns to the viewfinder; the entry
+        // is already persisted, so only in-memory media is discarded.
+        case (.committed(let id, _), .discarded):
+            return (.idle, [.discardMedia(id)])
+
         default:
             return (state, [])
         }

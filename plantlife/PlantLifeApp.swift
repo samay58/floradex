@@ -61,21 +61,20 @@ struct PlantLifeContentView: View {
     let dexRepository: DexRepository
     
     @StateObject private var imageService = ImageSelectionService.shared
-    @StateObject private var classificationViewModel: ClassificationViewModel
     @StateObject private var floradexViewModel: FloradexCollectionViewModel
+    @State private var captureModel: CaptureFlowModel
     @State private var selectedTab = 0
-    
+
     init(speciesRepository: SpeciesRepository, dexRepository: DexRepository) {
         self.speciesRepository = speciesRepository
         self.dexRepository = dexRepository
-        
-        // Initialize StateObjects in init
-        self._classificationViewModel = StateObject(wrappedValue: ClassificationViewModel(
-            speciesRepository: speciesRepository,
-            dexRepository: dexRepository
-        ))
+
         self._floradexViewModel = StateObject(wrappedValue: FloradexCollectionViewModel(
             dexRepository: dexRepository
+        ))
+        self._captureModel = State(initialValue: CaptureComposition.makeModel(
+            dexRepository: dexRepository,
+            speciesRepository: speciesRepository
         ))
     }
     
@@ -92,7 +91,7 @@ struct PlantLifeContentView: View {
                 // Removed print to avoid constant re-rendering logs
                 switch selectedTab {
                 case 0:
-                    IdentifyLandingView(viewModel: classificationViewModel)
+                    CaptureHomeView(model: captureModel)
                         .transition(.asymmetric(
                             insertion: .move(edge: .trailing).combined(with: .opacity),
                             removal: .move(edge: .leading).combined(with: .opacity)
@@ -116,17 +115,10 @@ struct PlantLifeContentView: View {
             .animation(AnimationConstants.signatureSpring, value: selectedTab)
         }
         .environmentObject(imageService)
-        .onChange(of: selectedTab) { oldValue, newValue in
-            print("[PlantLifeContentView] Tab changed from \(oldValue) to \(newValue)")
-            // When switching away from the Identify tab, cancel any ongoing processing
-            if oldValue == 0 && newValue != 0 {
-                classificationViewModel.cleanup()
-                // Clear the selected image to prevent re-processing
-                imageService.selectedImage = nil
-            }
-            // When switching to Floradex, refresh the entries
+        .onChange(of: selectedTab) { _, newValue in
+            // An in-flight identification keeps running across tab switches;
+            // the reveal card is waiting when the user comes back.
             if newValue == 1 {
-                print("[PlantLifeContentView] Fetching Floradex entries")
                 floradexViewModel.fetchEntries()
             }
         }

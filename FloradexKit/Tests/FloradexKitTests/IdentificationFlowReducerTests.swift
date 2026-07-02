@@ -140,6 +140,14 @@ import Testing
         #expect(effects.contains(.discardMedia(captureID)))
     }
 
+    @Test func dismissingCommittedCardReturnsToIdle() {
+        let committed = IdentificationFlowState.committed(captureID, DexNumber(3))
+        let (state, effects) = reducer.reduce(committed, .discarded)
+
+        #expect(state == .idle)
+        #expect(effects == [.discardMedia(captureID)])
+    }
+
     @Test func newCaptureIsValidFromRestingStates() {
         let fresh = CaptureID()
         for resting: IdentificationFlowState in [
