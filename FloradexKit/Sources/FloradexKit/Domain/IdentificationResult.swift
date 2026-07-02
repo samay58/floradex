@@ -64,6 +64,19 @@ public struct IdentificationResult: Hashable, Sendable, Codable {
 
     public var band: ConfidenceBand { ConfidenceBand(confidence) }
 
+    /// Distinct providers that contributed any candidate.
+    public var contributingProviderCount: Int {
+        Set(contributing.map(\.provider)).count
+    }
+
+    /// Distinct providers with a candidate for the winning species; with
+    /// `contributingProviderCount` this backs the "2 of 3 sources agree"
+    /// trust line.
+    public var agreeingProviderCount: Int {
+        let key = species.normalizedKey
+        return Set(contributing.filter { $0.species.normalizedKey == key }.map(\.provider)).count
+    }
+
     /// The same result re-asserted by the user; correction is authoritative
     /// but keeps the pipeline's provenance for the fixture loop.
     public func corrected(to species: Species) -> IdentificationResult {

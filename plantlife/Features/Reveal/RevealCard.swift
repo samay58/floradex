@@ -126,6 +126,11 @@ private struct ProvisionalContent: View {
                 }
                 Spacer()
             }
+            if result.contributingProviderCount > 1 {
+                Text("\(result.agreeingProviderCount) of \(result.contributingProviderCount) sources agree")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
             if result.band == .unsure || !result.alternatives.isEmpty {
                 AlternativesRow(model: model, result: result)
             }
@@ -140,14 +145,24 @@ private struct ProvisionalContent: View {
 
 private struct ConfidenceBadge: View {
     let result: IdentificationResult
+    @State private var showsRawConfidence = false
 
     var body: some View {
-        Label(label, systemImage: symbol)
+        // Banded by default; the raw number is available on tap, never hidden.
+        Button {
+            showsRawConfidence.toggle()
+        } label: {
+            Label(
+                showsRawConfidence ? result.confidence.formatted(.percent.precision(.fractionLength(0))) : label,
+                systemImage: symbol
+            )
             .font(.caption.weight(.semibold))
             .padding(.horizontal, 10)
             .padding(.vertical, 5)
             .background(color.opacity(0.15), in: Capsule())
             .foregroundStyle(color)
+        }
+        .buttonStyle(.plain)
     }
 
     private var label: String {
@@ -248,11 +263,19 @@ private struct UndoCountdownButton: View {
 private struct CorrectionContent: View {
     let model: CaptureFlowModel
     let result: IdentificationResult
+    @State private var overrideName = ""
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Which one is it?")
-                .font(.subheadline.weight(.medium))
+            HStack {
+                Text("Which one is it?")
+                    .font(.subheadline.weight(.medium))
+                Spacer()
+                Button("Cancel") {
+                    model.cancelCorrection()
+                }
+                .font(.caption)
+            }
             ForEach(result.alternatives, id: \.self) { alternative in
                 Button {
                     model.correct(to: alternative.species)
@@ -262,7 +285,21 @@ private struct CorrectionContent: View {
                 }
                 .buttonStyle(.bordered)
             }
+            HStack(spacing: 8) {
+                TextField("Or type a species name", text: $overrideName)
+                    .textFieldStyle(.roundedBorder)
+                    .autocorrectionDisabled()
+                Button("Use") {
+                    model.correct(to: Species(latinName: trimmedOverride))
+                }
+                .buttonStyle(.bordered)
+                .disabled(trimmedOverride.isEmpty)
+            }
         }
+    }
+
+    private var trimmedOverride: String {
+        overrideName.trimmingCharacters(in: .whitespaces)
     }
 }
 
@@ -309,10 +346,10 @@ private struct FailedContent: View {
 extension FlowFailure {
     var displayMessage: String {
         switch self {
-        case .credentialMissing:
-            return "Identification isn't set up yet"
+        case .credentialMissing(let provider):
+            return "Identification isn't set up: no key for \(provider.rawValue)"
         case .offline:
-            return "You're offline. We'll keep this one."
+            return "You're offline. Try again when you're connected."
         case .noPlantDetected:
             return "No plant found. Try a closer shot?"
         case .providersUnavailable:

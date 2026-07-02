@@ -2,6 +2,27 @@ import Foundation
 import Testing
 @testable import FloradexKit
 
+@Suite struct AgreementSummaryTests {
+    @Test func countsDistinctProvidersForWinnerAndOverall() {
+        let monstera = Species(latinName: "Monstera deliciosa")
+        let pothos = Species(latinName: "Epipremnum aureum")
+        let result = IdentificationResult(
+            species: monstera,
+            confidence: 0.8,
+            agreement: .majority,
+            contributing: [
+                IdentificationCandidate(species: monstera, confidence: 0.9, provider: .kindwise),
+                // A second candidate from the same provider must not double-count.
+                IdentificationCandidate(species: Species(latinName: "Monstera deliciosa Liebm."), confidence: 0.4, provider: .kindwise),
+                IdentificationCandidate(species: monstera, confidence: 0.7, provider: .visionReasoner),
+                IdentificationCandidate(species: pothos, confidence: 0.6, provider: .plantNet),
+            ]
+        )
+        #expect(result.agreeingProviderCount == 2)
+        #expect(result.contributingProviderCount == 3)
+    }
+}
+
 @Suite struct LatinNameNormalizationTests {
     @Test func dropsAuthorCitations() {
         #expect(Species.normalizeLatinName("Monstera deliciosa Liebm.") == "monstera deliciosa")

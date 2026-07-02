@@ -122,6 +122,10 @@ final class CaptureFlowModel {
         send(.correctionChosen(species))
     }
 
+    func cancelCorrection() {
+        send(.correctionCancelled)
+    }
+
     // MARK: - Reducer plumbing
 
     private func begin(with image: UIImage) {
