@@ -7,6 +7,7 @@ import PhotosUI
 struct CaptureHomeView: View {
     let model: CaptureFlowModel
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var pickerItem: PhotosPickerItem?
 
     var body: some View {
@@ -16,13 +17,15 @@ struct CaptureHomeView: View {
                 Spacer()
                 if model.state != .idle {
                     RevealCard(model: model)
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
-                        .padding(.bottom, 12)
+                        .transition(reduceMotion
+                                    ? .opacity
+                                    : .move(edge: .bottom).combined(with: .opacity))
+                        .padding(.bottom, Floradex.Space.m)
                 }
                 controls
             }
         }
-        .animation(.spring(response: 0.45, dampingFraction: 0.85), value: model.state == .idle)
+        .animation(reduceMotion ? nil : Floradex.Motion.spring, value: model.state == .idle)
         .task {
             await model.startCamera()
             #if DEBUG
@@ -81,7 +84,7 @@ struct CaptureHomeView: View {
                 message: "Pick a photo from your library to identify a plant."
             )
         case .unknown:
-            Color(.systemBackground).ignoresSafeArea()
+            Color.floraGround.ignoresSafeArea()
         }
     }
 
@@ -118,6 +121,8 @@ struct CaptureHomeView: View {
     }
 }
 
+/// The mechanical shutter: a machined ring whose inner disc compresses on
+/// press, so the button itself feels like a camera part.
 private struct ShutterButton: View {
     let enabled: Bool
     let action: () -> Void
@@ -132,14 +137,26 @@ private struct ShutterButton: View {
                     .fill(.white)
                     .frame(width: 62, height: 62)
             }
-            .shadow(radius: 6)
+            .shadow(color: .black.opacity(0.25), radius: 6, y: 2)
             .opacity(enabled ? 1 : 0.4)
         }
+        .buttonStyle(ShutterPressStyle())
         .disabled(!enabled)
         .accessibilityLabel("Capture plant photo")
     }
 }
 
+private struct ShutterPressStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.92 : 1)
+            .animation(Floradex.Motion.press, value: configuration.isPressed)
+    }
+}
+
+/// Camera-missing states as designed scenes on warm ground: the icon sits
+/// in a specimen plate, the title speaks serif, and the one action wears
+/// the surface's accent.
 private struct FallbackBackground: View {
     let symbol: String
     let title: String
@@ -147,12 +164,20 @@ private struct FallbackBackground: View {
     var settingsAction: (() -> Void)?
 
     var body: some View {
-        VStack(spacing: 12) {
-            Image(systemName: symbol)
-                .font(.system(size: 44))
-                .foregroundStyle(Color.floraGreen)
+        VStack(spacing: Floradex.Space.m) {
+            ZStack {
+                RoundedRectangle(cornerRadius: Floradex.Radius.plate)
+                    .fill(Color.floraPaper)
+                RoundedRectangle(cornerRadius: Floradex.Radius.plate)
+                    .strokeBorder(Color.floraHairline, lineWidth: 1)
+                Image(systemName: symbol)
+                    .font(.system(size: 30))
+                    .foregroundStyle(Color.floraGreen)
+            }
+            .frame(width: 72, height: 72)
+            .padding(.bottom, Floradex.Space.xs)
             Text(title)
-                .font(.title3.weight(.semibold))
+                .font(.floraDisplay)
             Text(message)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
@@ -162,10 +187,11 @@ private struct FallbackBackground: View {
                 Button("Open Settings", action: settingsAction)
                     .buttonStyle(.borderedProminent)
                     .tint(Color.floraGreen)
+                    .padding(.top, Floradex.Space.xs)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(.systemBackground))
+        .background(Color.floraGround)
         .ignoresSafeArea()
     }
 }
