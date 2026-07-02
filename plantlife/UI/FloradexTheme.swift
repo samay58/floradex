@@ -24,7 +24,6 @@ enum Floradex {
         static let s: CGFloat = 8
         static let m: CGFloat = 12
         static let l: CGFloat = 16
-        static let xl: CGFloat = 24
         /// Inset of card content from the paper edge.
         static let cardPadding: CGFloat = 18
     }
@@ -37,10 +36,25 @@ enum Floradex {
         static let settle = Animation.spring(response: 0.30, dampingFraction: 0.72)
         /// Press feedback; interruptible by design.
         static let press = Animation.spring(response: 0.25, dampingFraction: 0.80)
-        /// Beat length for staged reveals driven by PhaseAnimator.
-        static let stageBeat: TimeInterval = 0.42
+        /// The searching-lines breath while identification runs.
+        static let breath = Animation.easeInOut(duration: 0.9)
+        /// Reduce Motion swaps springs and moves for this quiet crossfade;
+        /// a nil animation would turn transitions into single-frame cuts.
+        static let reducedFade = Animation.easeInOut(duration: 0.2)
         /// Stamped things sit a hair off square.
         static let stampTilt = Angle.degrees(-1.5)
+    }
+
+    /// The shutter key's green family: hand-tuned shades of floraGreen so
+    /// the most brand-carrying control retunes with the brand, not apart
+    /// from it.
+    enum ShutterKey {
+        static let top = Color(red: 0.30, green: 0.83, blue: 0.55)
+        static let bottom = Color(red: 0.12, green: 0.57, blue: 0.36)
+        static let pressedTop = Color(red: 0.14, green: 0.56, blue: 0.36)
+        static let pressedBottom = Color(red: 0.10, green: 0.46, blue: 0.29)
+        static let inkShadow = Color(red: 0.04, green: 0.30, blue: 0.18)
+        static let embossShadow = Color(red: 0.05, green: 0.33, blue: 0.20)
     }
 
     /// PostScript name of the bundled pixel face (Departure Mono, OFL 1.1,
@@ -75,6 +89,13 @@ extension Color {
     static let floraHairline = flora(
         light: Color(red: 0.847, green: 0.827, blue: 0.776),
         dark: Color(white: 0.28)
+    )
+
+    /// Photo mattes: white in light, dimmed warm white in dark, like a
+    /// slide mount under gallery light instead of a glowing frame.
+    static let floraMatte = flora(
+        light: .white,
+        dark: Color(red: 0.865, green: 0.855, blue: 0.825)
     )
 
     /// The brand anchor (#2EB875). Held to one band per surface.

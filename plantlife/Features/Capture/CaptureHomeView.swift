@@ -25,13 +25,16 @@ struct CaptureHomeView: View {
                 controls
             }
         }
-        .animation(reduceMotion ? nil : Floradex.Motion.spring, value: model.state == .idle)
+        .animation(
+            reduceMotion ? Floradex.Motion.reducedFade : Floradex.Motion.spring,
+            value: model.state == .idle
+        )
         .task {
             await model.startCamera()
             #if DEBUG
             // Drives the fixture demo unattended (simulator screenshots,
-            // future Maestro flows). Pairs with FLORADEX_FIXTURES=1.
-            if ProcessInfo.processInfo.environment["FLORADEX_AUTORUN"] == "1" {
+            // future Maestro flows). Pairs with DebugFlags.fixtures.
+            if DebugFlags.autorun {
                 try? await Task.sleep(for: .seconds(1))
                 model.imported(SampleLeaf.image())
             }
@@ -150,12 +153,14 @@ private struct ShutterButton: View {
 }
 
 private struct ShutterKeyStyle: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     func makeBody(configuration: Configuration) -> some View {
         ZStack {
             housing(pressed: configuration.isPressed)
             key(pressed: configuration.isPressed)
         }
-        .animation(Floradex.Motion.press, value: configuration.isPressed)
+        .animation(reduceMotion ? nil : Floradex.Motion.press, value: configuration.isPressed)
     }
 
     /// Warm ceramic ring, top-lit, resting on two shadow layers that
@@ -176,20 +181,21 @@ private struct ShutterKeyStyle: ButtonStyle {
     }
 
     /// The green key: convex gradient with an inner bevel, a glass gloss
-    /// cap, and the macro-flower mark embossed in white.
+    /// cap, and the macro-flower mark embossed in white. Greens come from
+    /// the theme's ShutterKey family so brand retunes reach this control.
     private func key(pressed: Bool) -> some View {
         ZStack {
             Circle()
                 .fill(
                     LinearGradient(
                         colors: pressed
-                            ? [Color(red: 0.14, green: 0.56, blue: 0.36), Color(red: 0.10, green: 0.46, blue: 0.29)]
-                            : [Color(red: 0.30, green: 0.83, blue: 0.55), Color(red: 0.12, green: 0.57, blue: 0.36)],
+                            ? [Floradex.ShutterKey.pressedTop, Floradex.ShutterKey.pressedBottom]
+                            : [Floradex.ShutterKey.top, Floradex.ShutterKey.bottom],
                         startPoint: .top,
                         endPoint: .bottom
                     )
                     .shadow(.inner(color: .white.opacity(0.45), radius: 1, y: 1.5))
-                    .shadow(.inner(color: Color(red: 0.04, green: 0.30, blue: 0.18).opacity(0.55), radius: 3, y: -2))
+                    .shadow(.inner(color: Floradex.ShutterKey.inkShadow.opacity(0.55), radius: 3, y: -2))
                 )
             Ellipse()
                 .fill(
@@ -202,9 +208,11 @@ private struct ShutterKeyStyle: ButtonStyle {
                 .frame(width: 50, height: 28)
                 .offset(y: -16)
             Image(systemName: "camera.macro")
+                // Fixed size is deliberate: the mark is engraved on a
+                // fixed-geometry hardware key, not running text.
                 .font(.system(size: 24, weight: .semibold))
                 .foregroundStyle(.white)
-                .shadow(color: Color(red: 0.05, green: 0.33, blue: 0.20).opacity(0.6), radius: 0.5, y: 1)
+                .shadow(color: Floradex.ShutterKey.embossShadow.opacity(0.6), radius: 0.5, y: 1)
         }
         .frame(width: 68, height: 68)
         .scaleEffect(pressed ? 0.93 : 1)
@@ -249,16 +257,11 @@ private struct FallbackBackground: View {
 
     var body: some View {
         VStack(spacing: Floradex.Space.m) {
-            ZStack {
-                RoundedRectangle(cornerRadius: Floradex.Radius.plate)
-                    .fill(Color.floraPaper)
-                RoundedRectangle(cornerRadius: Floradex.Radius.plate)
-                    .strokeBorder(Color.floraHairline, lineWidth: 1)
+            SpecimenPlate(side: 72) {
                 Image(systemName: symbol)
-                    .font(.system(size: 30))
+                    .font(.title)
                     .foregroundStyle(Color.floraGreen)
             }
-            .frame(width: 72, height: 72)
             .padding(.bottom, Floradex.Space.xs)
             Text(title)
                 .font(.floraDisplay)

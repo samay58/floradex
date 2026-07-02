@@ -47,7 +47,7 @@ struct RootTabView: View {
         self._captureModel = State(initialValue: CaptureComposition.makeModel(store: store, media: media))
         #if DEBUG
         // Demo and UI-test harness: FLORADEX_TAB=dex lands on the collection.
-        if let raw = ProcessInfo.processInfo.environment["FLORADEX_TAB"], let tab = TabID(rawValue: raw) {
+        if let raw = DebugFlags.initialTab, let tab = TabID(rawValue: raw) {
             self._selection = State(initialValue: tab)
         }
         #endif

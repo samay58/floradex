@@ -96,13 +96,7 @@ struct EntryDetailView: View {
                     .clipShape(RoundedRectangle(cornerRadius: Floradex.Radius.plate - 1))
                 }
             }
-            .padding(5)
-            .background(.white, in: RoundedRectangle(cornerRadius: Floradex.Radius.plate))
-            .overlay(
-                RoundedRectangle(cornerRadius: Floradex.Radius.plate)
-                    .strokeBorder(Color.floraHairline, lineWidth: 1)
-            )
-            .shadow(color: .black.opacity(0.08), radius: 4, y: 2)
+            .photoMatte(inset: 5)
 
             EntrySpriteView(entry: entry, media: media)
                 .frame(width: 72, height: 72)
@@ -112,7 +106,7 @@ struct EntryDetailView: View {
 
     private var taxonomy: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(entry.species?.commonName ?? entry.species?.latinName ?? "Unknown")
+            Text(entry.displayName)
                 .font(.floraDisplayLarge)
             if let latin = entry.species?.latinName, entry.species?.commonName != nil {
                 Text(latin)
@@ -217,15 +211,11 @@ struct EntryDetailView: View {
               let result = try? JSONDecoder().decode(IdentificationResult.self, from: data) else {
             return nil
         }
-        let sources = Set(result.contributing.map(\.provider)).count
+        let sources = result.contributingProviderCount
         var parts = [
             sources == 1 ? "Identified by 1 source" : "Identified by \(sources) sources",
+            result.band.rawValue,
         ]
-        switch result.band {
-        case .confident: parts.append("confident")
-        case .likely: parts.append("likely")
-        case .unsure: parts.append("unsure")
-        }
         if result.origin == .userCorrection {
             parts.append("corrected by you")
         }

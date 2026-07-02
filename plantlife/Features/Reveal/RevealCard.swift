@@ -31,8 +31,18 @@ struct RevealCard: View {
         .shadow(color: .black.opacity(0.10), radius: 18, y: 8)
         .shadow(color: .black.opacity(0.06), radius: 3, y: 1)
         .padding(.horizontal, Floradex.Space.m)
-        .animation(reduceMotion ? nil : Floradex.Motion.spring, value: model.state)
-        .animation(reduceMotion ? nil : Floradex.Motion.spring, value: model.details != nil)
+        .animation(stageAnimation, value: model.state)
+        .animation(stageAnimation, value: model.details != nil)
+        .animation(
+            reduceMotion ? Floradex.Motion.reducedFade : Floradex.Motion.settle,
+            value: model.spriteImage != nil
+        )
+    }
+
+    /// Reduce Motion swaps the spring for a quiet crossfade rather than
+    /// nil, which would turn every stage change into a single-frame cut.
+    private var stageAnimation: Animation {
+        reduceMotion ? Floradex.Motion.reducedFade : Floradex.Motion.spring
     }
 
     private var rule: some View {
@@ -137,8 +147,7 @@ private struct NameBlock: View {
     }
 }
 
-/// The frozen capture as a mounted photograph: white matte, hairline edge,
-/// resting shadow.
+/// The frozen capture as a mounted photograph.
 private struct MountedPhoto: View {
     let image: UIImage
 
@@ -148,13 +157,7 @@ private struct MountedPhoto: View {
             .scaledToFill()
             .frame(width: 56, height: 56)
             .clipShape(RoundedRectangle(cornerRadius: Floradex.Radius.plate - 1))
-            .padding(3)
-            .background(.white, in: RoundedRectangle(cornerRadius: Floradex.Radius.plate))
-            .overlay(
-                RoundedRectangle(cornerRadius: Floradex.Radius.plate)
-                    .strokeBorder(Color.floraHairline, lineWidth: 1)
-            )
-            .shadow(color: .black.opacity(0.10), radius: 2, y: 1)
+            .photoMatte()
     }
 }
 
@@ -165,8 +168,7 @@ private struct SpritePlate: View {
     let isSearching: Bool
 
     var body: some View {
-        ZStack {
-            DitherField()
+        SpecimenPlate(side: 62, dithered: true) {
             if let sprite {
                 PixelScaledImage(image: sprite)
                     .frame(width: 48, height: 48)
@@ -177,13 +179,6 @@ private struct SpritePlate: View {
                     .opacity(isSearching ? 0.7 : 1)
             }
         }
-        .frame(width: 62, height: 62)
-        .background(Color.floraPaper)
-        .clipShape(RoundedRectangle(cornerRadius: Floradex.Radius.plate))
-        .overlay(
-            RoundedRectangle(cornerRadius: Floradex.Radius.plate)
-                .strokeBorder(Color.floraHairline, lineWidth: 1)
-        )
     }
 }
 
@@ -280,27 +275,28 @@ private struct ConfidenceSeal: View {
         Button {
             showsRawConfidence.toggle()
         } label: {
-            Text(showsRawConfidence
-                 ? result.confidence.formatted(.percent.precision(.fractionLength(0)))
-                 : label)
+            // Raw mode keeps the band word beside the number so the band
+            // never rides on color alone.
+            Text(showsRawConfidence ? "\(rawPercent) · \(label)" : label)
                 .font(.caption.weight(.semibold))
                 .textCase(.uppercase)
                 .tracking(0.8)
                 .monospacedDigit()
                 .foregroundStyle(Color.floraBand(result.band))
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
-                .overlay(
-                    Capsule()
-                        .strokeBorder(Color.floraBand(result.band).opacity(0.55), lineWidth: 1.25)
+                .floraChip(
+                    stroke: Color.floraBand(result.band).opacity(0.55),
+                    lineWidth: 1.25
                 )
                 .rotationEffect(reduceMotion ? .zero : Floradex.Motion.stampTilt)
-                .frame(minHeight: 40)
-                .contentShape(Rectangle())
         }
         .buttonStyle(FloraPressStyle())
-        .accessibilityLabel("Confidence: \(label)")
-        .accessibilityHint("Shows the raw confidence number")
+        .accessibilityLabel("Confidence")
+        .accessibilityValue(showsRawConfidence ? "\(rawPercent), \(label)" : label)
+        .accessibilityHint(showsRawConfidence ? "Hides the raw confidence number" : "Shows the raw confidence number")
+    }
+
+    private var rawPercent: String {
+        result.confidence.formatted(.percent.precision(.fractionLength(0)))
     }
 
     private var label: String {
@@ -329,11 +325,7 @@ private struct AlternativesRow: View {
                         } label: {
                             Text(alternative.species.displayName)
                                 .font(.floraLatinSmall)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 5)
-                                .overlay(Capsule().strokeBorder(Color.floraHairline, lineWidth: 1))
-                                .frame(minHeight: 40)
-                                .contentShape(Rectangle())
+                                .floraChip()
                         }
                         .buttonStyle(FloraPressStyle())
                     }
@@ -381,11 +373,7 @@ private struct UndoCountdownButton: View {
                 }
             }
             .font(.caption.weight(.medium))
-            .padding(.horizontal, Floradex.Space.m)
-            .padding(.vertical, 7)
-            .overlay(Capsule().strokeBorder(Color.floraHairline, lineWidth: 1))
-            .frame(minHeight: 40)
-            .contentShape(Rectangle())
+            .floraChip(horizontalPadding: Floradex.Space.m, verticalPadding: 7)
         }
         .buttonStyle(FloraPressStyle())
     }

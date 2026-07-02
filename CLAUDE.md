@@ -36,7 +36,7 @@ Machine notes:
 
 API keys are development environment variables (`KINDWISE_API_KEY`, `PLANTNET_API_KEY`, `OPENAI_API_KEY`) resolved through `CredentialBroker` at request time; there is no xcconfig path and nothing key-shaped in the repo. `FLORADEX_FIXTURES=1` runs the app with no keys at all.
 
-The shared scheme (`plantlife.xcodeproj/xcshareddata/xcschemes/floradex.xcscheme`) carries `FLORADEX_FIXTURES`, `FLORADEX_AUTORUN`, and `FLORADEX_TAB` as disabled environment variables; enable them in the scheme editor for Xcode runs, or pass them as `SIMCTL_CHILD_`-prefixed variables when launching via `simctl launch`. API keys stay out of that file deliberately (it is tracked).
+The shared scheme (`plantlife.xcodeproj/xcshareddata/xcschemes/floradex.xcscheme`) carries `FLORADEX_FIXTURES`, `FLORADEX_AUTORUN`, `FLORADEX_TAB`, and `FLORADEX_ENTRY` as disabled environment variables; enable them in the scheme editor for Xcode runs, or pass them as `SIMCTL_CHILD_`-prefixed variables when launching via `simctl launch`. `plantlife/Shared/DebugFlags.swift` is the single reader for these flags. API keys stay out of that file deliberately (it is tracked).
 
 ## Architecture (rewrite in progress, phases 2 through 6 landed)
 

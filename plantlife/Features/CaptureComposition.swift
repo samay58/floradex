@@ -14,7 +14,7 @@ enum CaptureComposition {
         media: FileMediaStore
     ) -> CaptureFlowModel {
         #if DEBUG
-        if ProcessInfo.processInfo.environment["FLORADEX_FIXTURES"] == "1" {
+        if DebugFlags.fixtures {
             return fixtureModel(store: store, media: media)
         }
         #endif

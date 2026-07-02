@@ -9,19 +9,22 @@ struct DitherField: View {
 
     var body: some View {
         Canvas { context, size in
+            // One merged path, one fill: this view sits in every grid tile,
+            // so per-cell fills would multiply across a scrolling dex.
+            var checker = Path()
             let columns = Int(ceil(size.width / cell))
             let rows = Int(ceil(size.height / cell))
             for row in 0..<rows {
                 for column in 0..<columns where (row + column).isMultiple(of: 2) {
-                    let rect = CGRect(
+                    checker.addRect(CGRect(
                         x: CGFloat(column) * cell,
                         y: CGFloat(row) * cell,
                         width: cell,
                         height: cell
-                    )
-                    context.fill(Path(rect), with: .color(tint))
+                    ))
                 }
             }
+            context.fill(checker, with: .color(tint))
         }
     }
 }

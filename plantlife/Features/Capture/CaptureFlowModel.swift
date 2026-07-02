@@ -279,7 +279,11 @@ final class CaptureFlowModel {
                 guard let image = UIImage(data: data) else {
                     throw ProviderError.invalidResponse("sprite data was not an image")
                 }
-                let stored = image.resized(maxSide: 256).pngData() ?? data
+                // The card shows the same 256px rendition that goes to
+                // disk, so the reveal and the dex decimate identically and
+                // the UI never holds the full-size decode.
+                let resized = image.resized(maxSide: 256)
+                let stored = resized.pngData() ?? data
                 try await media.writeSprite(stored, for: entry.id, version: 1)
                 await MainActor.run { [weak self] in
                     guard let self else { return }
@@ -288,7 +292,7 @@ final class CaptureFlowModel {
                     // sprite must not paint onto it. Persistence above stands.
                     guard case .committed(_, let number) = self.state,
                           number == entry.number else { return }
-                    self.spriteImage = image
+                    self.spriteImage = resized
                     self.recorder.record(.spriteShown)
                 }
             } catch {

@@ -25,15 +25,26 @@ struct DexGridView: View {
     @State private var isSelecting = false
     @State private var selectedNumbers: Set<Int> = []
     @State private var navigationPath = NavigationPath()
+    #if DEBUG
+    @State private var hasAutoOpenedEntry = false
+    #endif
+
+    private var retiredNumbers: [Int] {
+        ledgers.first?.retired ?? []
+    }
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
             Group {
-                if entries.isEmpty {
+                if entries.isEmpty && retiredNumbers.isEmpty {
                     emptyState
+                } else if !searchText.isEmpty && visibleEntries.isEmpty {
+                    ContentUnavailableView.search(text: searchText)
                 } else if showsList {
                     listContent
                 } else {
+                    // An all-deleted collection still reaches the grid so
+                    // the retired-number gaps stay on record.
                     gridContent
                 }
             }
@@ -48,11 +59,12 @@ struct DexGridView: View {
             }
         }
         #if DEBUG
-        // Screenshot and Maestro harness: FLORADEX_ENTRY=1 opens the first
-        // entry. Pairs with FLORADEX_TAB=dex.
-        .task {
-            if ProcessInfo.processInfo.environment["FLORADEX_ENTRY"] == "1",
-               let first = entries.first {
+        // Screenshot and Maestro harness: opens the first entry once, even
+        // when fixtures seed after first render; re-appearing tabs must not
+        // push duplicates. Pairs with DebugFlags.initialTab.
+        .task(id: entries.first?.persistentModelID) {
+            if DebugFlags.opensFirstEntry, !hasAutoOpenedEntry, let first = entries.first {
+                hasAutoOpenedEntry = true
                 navigationPath.append(first.persistentModelID)
             }
         }
@@ -75,25 +87,21 @@ struct DexGridView: View {
         case .newest:
             return result.sorted { $0.createdAt > $1.createdAt }
         case .name:
-            return result.sorted { displayName(for: $0) < displayName(for: $1) }
+            return result.sorted { $0.displayName < $1.displayName }
         }
     }
 
     /// Grid cells: entries, with retired numbers interleaved as designed
-    /// absences. Gaps only appear in number order with nothing filtered and
-    /// no selection under way.
+    /// absences. Gaps stay put during selection so tiles don't reflow under
+    /// the user's finger; they only leave for search and non-number sorts.
     private var gridCells: [DexCell] {
         let entryCells = visibleEntries.map(DexCell.entry)
-        guard sortOption == .number, searchText.isEmpty, !isSelecting,
-              let retired = ledgers.first?.retired, !retired.isEmpty else {
+        guard sortOption == .number, searchText.isEmpty,
+              !retiredNumbers.isEmpty else {
             return entryCells
         }
-        return (entryCells + retired.map(DexCell.gap))
+        return (entryCells + retiredNumbers.map(DexCell.gap))
             .sorted { $0.number < $1.number }
-    }
-
-    private func displayName(for entry: DexEntryV2) -> String {
-        entry.species.map { $0.commonName ?? $0.latinName } ?? "Unknown"
     }
 
     private var gridContent: some View {
@@ -201,19 +209,11 @@ struct DexGridView: View {
     /// First-run scene: an empty plate waiting for its first specimen.
     private var emptyState: some View {
         VStack(spacing: Floradex.Space.m) {
-            ZStack {
-                DitherField()
+            SpecimenPlate(side: 72, dashed: true, dithered: true) {
                 Image(systemName: "leaf.fill")
-                    .font(.system(size: 26))
+                    .font(.title2)
                     .foregroundStyle(Color.floraGreen.opacity(0.45))
             }
-            .frame(width: 72, height: 72)
-            .background(Color.floraPaper)
-            .clipShape(RoundedRectangle(cornerRadius: Floradex.Radius.plate))
-            .overlay(
-                RoundedRectangle(cornerRadius: Floradex.Radius.plate)
-                    .strokeBorder(Color.floraHairline, style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
-            )
             .padding(.bottom, Floradex.Space.xs)
             Text("No plants yet")
                 .font(.floraDisplay)
@@ -277,7 +277,7 @@ private struct DexTile: View {
             Text("#\(entry.number)")
                 .font(.floraNumber(.tile))
                 .foregroundStyle(Color.floraPixelInk)
-            Text(entry.species.map { $0.commonName ?? $0.latinName } ?? "Unknown")
+            Text(entry.displayName)
                 .font(.caption)
                 .lineLimit(1)
         }
@@ -303,14 +303,18 @@ private struct GapTile: View {
     let number: Int
 
     var body: some View {
+        // Mirrors DexTile's scaffold; the hidden name line reserves the
+        // same caption height so gap tiles stay flush with their row.
         VStack(spacing: Floradex.Space.s) {
             Color.clear
                 .frame(width: 96, height: 96)
             Text("#\(number)")
                 .font(.floraNumber(.tile))
                 .foregroundStyle(Color.floraPixelInk.opacity(0.28))
-            Text(" ")
+            Text("Unknown")
                 .font(.caption)
+                .lineLimit(1)
+                .hidden()
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 14)
@@ -333,7 +337,7 @@ private struct DexRow: View {
             EntrySpriteView(entry: entry, media: media)
                 .frame(width: 44, height: 44)
             VStack(alignment: .leading, spacing: 2) {
-                Text(entry.species.map { $0.commonName ?? $0.latinName } ?? "Unknown")
+                Text(entry.displayName)
                     .font(.body)
                 if let latin = entry.species?.latinName {
                     Text(latin)
@@ -362,8 +366,7 @@ struct EntrySpriteView: View {
     @State private var isSprite = false
 
     var body: some View {
-        ZStack {
-            DitherField()
+        SpecimenPlate(dithered: true) {
             if let image {
                 if isSprite {
                     PixelScaledImage(image: image)
@@ -379,12 +382,6 @@ struct EntrySpriteView: View {
                     .foregroundStyle(Color.floraGreen.opacity(0.45))
             }
         }
-        .background(Color.floraPaper)
-        .clipShape(RoundedRectangle(cornerRadius: Floradex.Radius.plate))
-        .overlay(
-            RoundedRectangle(cornerRadius: Floradex.Radius.plate)
-                .strokeBorder(Color.floraHairline, lineWidth: 1)
-        )
         .task(id: entry.spriteVersion) {
             let entryID = EntryID(rawValue: entry.mediaID)
             if entry.spriteVersion > 0, let sprite = await media.latestSprite(for: entryID),
