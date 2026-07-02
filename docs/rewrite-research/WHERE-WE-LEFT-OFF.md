@@ -1,8 +1,30 @@
 # Where we left off
 
-Updated 2026-07-02, end of the de-sloppify plus phase 5 and 6 session. Branch `rewrite/foundation`.
+Updated 2026-07-02 (evening), end of the design identity session. Branch `rewrite/foundation`.
 
-## State in one paragraph
+## Update, 2026-07-02 evening: the design identity session
+
+The phase 8 visual identity landed, run as explore, decide, systemize, build, audit (`floradex-design-exploration-prompt.md` was the brief).
+
+**The decision.** Three directions were built as real cards behind a DEBUG picker, screenshot on simulator, and presented for a pick: herbarium (specimen label), cartridge (game artifact), instrument (machined glass). Samay chose herbarium as the base with cartridge and instrument borrowed only where they earn it. The register rule that keeps it coherent, written into `plantlife/UI/FloradexTheme.swift`: words are serif on paper; the collection's own artifacts (sprites, dex numbers) are pixel; motion is machined. The registers never trade places.
+
+**What landed, one commit per wave, all verified (build green, 101 kit tests, 7 app tests, fixture-loop screenshots in `screenshots/`).**
+
+- Tokens: `FloradexTheme` (semantic warm-paper colors with dark variants, band palette deepened for contrast, radius language 16/12/3, signature spring plus stamp settle, pixel face scoped to dex numbers via `FloraNumberRole`), `FloraPressStyle`, `DitherField`, `PixelScaledImage`. `Theme.swift` and its dead aliases are gone.
+- Departure Mono Regular (OFL 1.1, license bundled beside the font) registered via UIAppFonts; it renders dex numbers and nothing else. This settles spec open question 5: single-purpose revival, for numbers rather than headers; headers went to New York serif instead.
+- Reveal card: opaque paper specimen label, serif name over latin italic, mounted photo, sprite in a dithered plate, confidence as a stamped seal (raw number still on tap), redacted breathing rows instead of a spinner, dex number stamped in pixel ink with a settle spring and a rigid single-hit haptic (`HeroHaptics.stamp()` replaced the success notification at commit). Reduce Motion collapses everything to crossfades.
+- Capture home: camera-missing states are designed scenes on warm ground; shutter compresses on press.
+- Dex grid: paper tiles, pixel numbers, dithered sprite plates, retired numbers shown in number order as dash-bordered gap tiles, designed first-run empty state. `FLORADEX_ENTRY=1` (DEBUG) opens the first entry for screenshots and Maestro.
+- Entry detail: one continuous herbarium sheet (hairline-ruled sections with typed field labels; the stacked boxes are gone), pixel number in the nav bar, destructive delete pinned red so it stops inheriting the brand tint.
+- The app icon needed no rework: the vector-dissolving-into-pixels leaf is the chosen hybrid exactly.
+
+**Audit state (screenshots in `screenshots/`, `wave*-` and `audit-` prefixes).** Light: identifying, provisional, committed, camera-missing, credential-missing failure, empty dex, populated dex, entry detail. Dark: provisional, dex grid, entry detail. Dynamic Type XXL: dex grid (pixel numbers scale via their anchor styles). Warning budget still zero; the only build-log line remains the appintentsmetadataprocessor noise.
+
+**Not screenshot this session, verified in code only:** the correcting state and the gap tile need a tap, and every headless route was closed (no computer-use MCP connected; XcodeBuildMCP UI automation and idb refuse the CommandLineTools xcode-select). The phase 7 XCUITest smoke should capture both. The offline failure state is unreachable headlessly until phase 7 wires the fixture catalog's case 8 into the app composition (fixture mode today composes only the happy path). The identifying-to-provisional crossfade item: header geometry is now identical across those states, which removes the layout jump; confirm the remaining text crossfade feels right on device.
+
+**Parked for Samay:** whether the sources-agree line should also appear on the committed card, and physical-device verification of the stamp haptic (rigid, single hit) alongside the existing capture-latency item.
+
+## State in one paragraph (as of the afternoon session)
 
 Phases 0 through 6 are done (phase 6 minus the offline queue, which moved to phase 8 with a note in the spec): the de-sloppify pass below, then the full phase 5 remainder in the same session. The v2 SwiftData schema is live (real DexEntry-to-SpeciesRecord relationship, persisted DexLedger, media on disk keyed by mediaID), with an in-place migration from v1 that froze numbers, tombstoned gaps, and exported image blobs to disk; the migration ran for real against the simulator's existing store and its seeded test is green. The hero loop commits through `SwiftDataDexStore` (the Kit's `DexStore` seam); the new `DexGridView` and `EntryDetailView` replace the legacy collection subtree; the root is a native `TabView`. Nothing legacy remains: no repositories, no LiquidTabBar, no AnimationConstants, no v1 model files outside the versioned schema. FloradexKit has 101 green Swift Testing tests; the app suite is the seeded migration test plus six store tests, all green on simulator under Swift 6. Warnings are down to 15 (from 140 at baseline, 102 at the session start), every one of them the missing app-icon assets. The full loop was re-verified on the iOS 26.5 simulator with screenshots at each stage, before and after the Swift 6 flip.
 

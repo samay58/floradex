@@ -54,8 +54,9 @@ Read `docs/rewrite-research/floradex-rewrite-spec.md` before any structural chan
 
 ## Rewrite status and rules
 
-- Done: phase 2 (dead code wave 1, test repair, iOS 26 crash fixes), phase 3 (project wiring, deployment target 26.0), phase 4 (Kit orchestrator + provider clients + hero loop UI), phase 5 (v2 schema + migration, new dex/entry surfaces, native TabView root, all legacy deleted), phase 6 (trust and correction states, Swift 6 flip via `scripts/flip_swift6.rb`).
-- Next: phase 7 (fixture assets, Maestro/XCUITest), phase 8 (polish and offline queue, proxy scaffold in `proxy/`; the app icon, originally phase 8, landed 2026-07-02).
+- Done: phase 2 (dead code wave 1, test repair, iOS 26 crash fixes), phase 3 (project wiring, deployment target 26.0), phase 4 (Kit orchestrator + provider clients + hero loop UI), phase 5 (v2 schema + migration, new dex/entry surfaces, native TabView root, all legacy deleted), phase 6 (trust and correction states, Swift 6 flip via `scripts/flip_swift6.rb`), and the phase 8 visual identity (2026-07-02 design session: herbarium direction, token layer, all surfaces restyled, app icon).
+- Next: phase 7 (fixture assets, Maestro/XCUITest), phase 8 remainder (offline queue, proxy scaffold in `proxy/`, on-device frame pacing).
+- Design language: `plantlife/UI/FloradexTheme.swift` is the token layer and carries the register rule (words serif on paper, dex numbers in the bundled Departure Mono pixel face, machined motion). New surfaces use its tokens, never ad hoc values; the pixel face renders dex numbers and nothing else.
 - Never hand-edit `project.pbxproj`; use `scripts/wire_floradexkit.rb` as the pattern (xcodeproj gem, checkpoint commit, line-by-line diff review, green build) for any further project mutations.
 - Warning budget: zero project warnings as of the app-icon fill on 2026-07-02; the only remaining build-log line is `appintentsmetadataprocessor` toolchain noise (`docs/rewrite-research/warning-baseline.md` started at 140). The count stays at zero, and new code merges with zero warnings.
 - Path note: `/Users/samaydhawan/floradex` is a symlink to this checkout, not a separate worktree.

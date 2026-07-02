@@ -168,10 +168,7 @@ private struct SpritePlate: View {
         ZStack {
             DitherField()
             if let sprite {
-                Image(uiImage: sprite)
-                    .resizable()
-                    .interpolation(.none)
-                    .scaledToFit()
+                PixelScaledImage(image: sprite)
                     .frame(width: 48, height: 48)
                     .transition(.scale(scale: 1.12).combined(with: .opacity))
             } else {

@@ -365,11 +365,15 @@ struct EntrySpriteView: View {
         ZStack {
             DitherField()
             if let image {
-                Image(uiImage: image)
-                    .resizable()
-                    .interpolation(isSprite ? .none : .medium)
-                    .scaledToFit()
-                    .padding(isSprite ? 6 : 0)
+                if isSprite {
+                    PixelScaledImage(image: image)
+                        .padding(6)
+                } else {
+                    Image(uiImage: image)
+                        .resizable()
+                        .interpolation(.medium)
+                        .scaledToFit()
+                }
             } else {
                 Image(systemName: "leaf.fill")
                     .foregroundStyle(Color.floraGreen.opacity(0.45))

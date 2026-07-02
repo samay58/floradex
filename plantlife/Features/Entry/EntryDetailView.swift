@@ -48,6 +48,9 @@ struct EntryDetailView: View {
                 } label: {
                     Label("Delete", systemImage: "trash")
                 }
+                // Destructive stays red; without this it inherits the
+                // brand tint from the tab root.
+                .tint(.red)
             }
         }
         .confirmationDialog(
