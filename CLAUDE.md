@@ -23,6 +23,8 @@ xcodebuild -project plantlife.xcodeproj -scheme floradex test \
 
 If XcodeBuildMCP tools are available, prefer them over raw xcodebuild.
 
+Machine note: `xcode-select` points at CommandLineTools, so prefix `xcodebuild`/`xcrun`/`swift` with `DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer` or they fail with a "requires Xcode" error.
+
 API keys are development environment variables (`KINDWISE_API_KEY`, `PLANTNET_API_KEY`, `OPENAI_API_KEY`) resolved through `CredentialBroker` at request time; there is no xcconfig path and nothing key-shaped in the repo. `FLORADEX_FIXTURES=1` runs the app with no keys at all.
 
 The shared scheme (`plantlife.xcodeproj/xcshareddata/xcschemes/floradex.xcscheme`) carries `FLORADEX_FIXTURES`, `FLORADEX_AUTORUN`, and `FLORADEX_TAB` as disabled environment variables; enable them in the scheme editor for Xcode runs, or pass them as `SIMCTL_CHILD_`-prefixed variables when launching via `simctl launch`. API keys stay out of that file deliberately (it is tracked).
@@ -46,5 +48,5 @@ Read `docs/rewrite-research/floradex-rewrite-spec.md` before any structural chan
 - Done: phase 2 (dead code wave 1, test repair, iOS 26 crash fixes), phase 3 (project wiring, deployment target 26.0), phase 4 (Kit orchestrator + provider clients + hero loop UI), phase 5 (v2 schema + migration, new dex/entry surfaces, native TabView root, all legacy deleted), phase 6 (trust and correction states, Swift 6 flip via `scripts/flip_swift6.rb`).
 - Next: phase 7 (fixture assets, Maestro/XCUITest), phase 8 (polish incl. app icon and offline queue, proxy scaffold in `proxy/`).
 - Never hand-edit `project.pbxproj`; use `scripts/wire_floradexkit.rb` as the pattern (xcodeproj gem, checkpoint commit, line-by-line diff review, green build) for any further project mutations.
-- Warning budget: 15 at last build, all of them the missing app-icon assets plus one line of toolchain noise; there are zero Swift source warnings (`docs/rewrite-research/warning-baseline.md` started at 140). The count must only shrink, and new code merges with zero warnings.
+- Warning budget: zero project warnings as of the app-icon fill on 2026-07-02; the only remaining build-log line is `appintentsmetadataprocessor` toolchain noise (`docs/rewrite-research/warning-baseline.md` started at 140). The count stays at zero, and new code merges with zero warnings.
 - Path note: `/Users/samaydhawan/floradex` is a symlink to this checkout, not a separate worktree.

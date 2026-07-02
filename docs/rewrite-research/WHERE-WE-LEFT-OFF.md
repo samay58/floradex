@@ -39,11 +39,21 @@ Phases 0 through 6 are done (phase 6 minus the offline queue, which moved to pha
 - README rewritten against current reality (env-var credentials, fixture mode, Kit architecture, correct scheme); FOLDER_STRUCTURE.md rewritten; CLAUDE.md commands and credentials section corrected. All edited docs pass slopcheck.
 - Warnings: unique-deduped count 60 before the pass, 42 after (the raw baseline-methodology number is in `warning-baseline.md`). Remaining carriers: AnimationConstants (15, dies with LiquidTabBar in phase 5), asset catalog (6), and the SwiftData keypath-Sendability class on the v1 models (dies with the v2 schema).
 
-**Known cosmetic items deferred to phase 8:** the identifying-to-provisional crossfade briefly shows the outgoing layout mid-transition (about 0.45s); the app icon set is missing its 1024pt and iPad slots (six of the remaining warnings).
+**Known cosmetic items deferred to phase 8:** the identifying-to-provisional crossfade briefly shows the outgoing layout mid-transition (about 0.45s).
+
+## Update, 2026-07-02 afternoon: app icon landed early
+
+The app icon (a phase 8 item) is done: ChatGPT Images artwork iterated over three rounds (a leaf dissolving from smooth vector into chunky pixel art, the capture-to-dex story in one mark), then palette-quantized to the brand hexes and written into all three universal 1024 slots (light, dark on near-black green, tinted grayscale). Small-size legibility was checked at 60px and against the corner mask. Project warnings went from 15 to zero; the only build-log line left is appintentsmetadataprocessor toolchain noise. The generation and finalize scripts are session scratch, not in the repo; the three PNGs in `AppIcon.appiconset` are the artifact. Note: a parallel session's sprite-fix commit (0776e6c) picked these PNGs up mid-write; content verified intact.
+
+Environment findings from the same afternoon, verify before trusting simulators:
+
+- The iOS simulator runtime disk image is gone (`simctl runtime list` shows zero images; likely purged under disk pressure, the disk is at about 16GB free). Device folders still exist but nothing can boot. Reinstall with `xcodebuild -downloadPlatform iOS` (about 8GB) before any simulator test or demo run. Kit tests (`swift test`) are unaffected and were green (101) after this state.
+- `xcode-select` points at CommandLineTools; prefix builds with `DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer`.
+- A corrupted DerivedData build database produced disk I/O errors mid-build once; deleting the project's DerivedData folder fixed it.
 
 ## Next, in order
 
-**Phase 7** (per the spec): fixture corpus materialization (deterministic photo assets and recorded payloads behind the catalog), an XCUITest smoke of the hero path, and Maestro flows if it installs cleanly. Then phase 8: polish (app icon set kills the last 15 warnings, reveal-transition tightening, frame pacing on device), the offline capture queue (moved from phase 6), and the Cloudflare Workers + App Attest proxy scaffold. The committed execution prompt (`floradex-rewrite-execution-prompt.md`) still describes these accurately.
+**Phase 7** (per the spec): fixture corpus materialization (deterministic photo assets and recorded payloads behind the catalog), an XCUITest smoke of the hero path, and Maestro flows if it installs cleanly. Then phase 8: polish (reveal-transition tightening, frame pacing on device; the app icon is already done, see the update below), the offline capture queue (moved from phase 6), and the Cloudflare Workers + App Attest proxy scaffold. The committed execution prompt (`floradex-rewrite-execution-prompt.md`) still describes these accurately.
 
 ## Deferred decisions parked with Samay
 
