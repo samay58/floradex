@@ -129,7 +129,7 @@ final class CaptureFlowModel {
         details = nil
         spriteImage = nil
         duplicateOfNumber = nil
-        let sized = UIImage.ImageProcessing.resized(image, maxSide: 1024) ?? image
+        let sized = image.resized(maxSide: 1024)
         guard let payload = sized.jpegData(compressionQuality: 0.85) else {
             logger.error("could not encode capture payload")
             return
@@ -270,7 +270,7 @@ final class CaptureFlowModel {
                 guard let image = UIImage(data: data) else {
                     throw ProviderError.invalidResponse("sprite data was not an image")
                 }
-                let stored = UIImage.ImageProcessing.resized(image, maxSide: 256)?.pngData() ?? data
+                let stored = image.resized(maxSide: 256).pngData() ?? data
                 try await self?.dexRepository.updateSprite(for: entryID, spriteData: stored)
                 await MainActor.run { [weak self] in
                     self?.spriteImage = image

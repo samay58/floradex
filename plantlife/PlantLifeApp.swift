@@ -60,7 +60,6 @@ struct PlantLifeContentView: View {
     let speciesRepository: SpeciesRepository
     let dexRepository: DexRepository
     
-    @StateObject private var imageService = ImageSelectionService.shared
     @StateObject private var floradexViewModel: FloradexCollectionViewModel
     @State private var captureModel: CaptureFlowModel
     @State private var selectedTab = 0
@@ -114,7 +113,6 @@ struct PlantLifeContentView: View {
             }
             .animation(AnimationConstants.signatureSpring, value: selectedTab)
         }
-        .environmentObject(imageService)
         .onChange(of: selectedTab) { _, newValue in
             // An in-flight identification keeps running across tab switches;
             // the reveal card is waiting when the user comes back.

@@ -97,7 +97,6 @@ struct DexCard: View {
                     let hapticGenerator = UIImpactFeedbackGenerator(style: .rigid)
                     hapticGenerator.impactOccurred()
                 }
-                // SoundManager.shared.playSound(.trash) // Sound file not available
                 onDelete?()
             } label: {
                 Label("Delete", systemImage: "trash")

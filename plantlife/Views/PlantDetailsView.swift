@@ -1,10 +1,10 @@
 import SwiftUI
 import SwiftData
 
-/// Modern PlantDetailsView with immersive full-screen design
+/// Modern PlantDetailsView with immersive full-screen design.
+/// Entry-only since the hero-loop rewrite: identification presents its own
+/// reveal surface, and this screen renders saved dex entries.
 struct PlantDetailsView: View {
-    @ObservedObject var viewModel: ClassificationViewModel
-    let identifiedImage: UIImage?
     let existingEntry: DexEntry?
     
     @State private var speciesDetails: SpeciesDetails?
@@ -23,25 +23,8 @@ struct PlantDetailsView: View {
     // Query for SpeciesDetails if an existing entry is provided
     @Query var queriedSpeciesDetails: [SpeciesDetails]
     
-    // Initialize for new identifications
-    init(viewModel: ClassificationViewModel, identifiedImage: UIImage, namespace: Namespace.ID? = nil) {
-        self._viewModel = ObservedObject(wrappedValue: viewModel)
-        self.identifiedImage = identifiedImage
-        self.existingEntry = nil
-        // Query will be empty initially, details come from viewModel
-        self._queriedSpeciesDetails = Query(filter: #Predicate<SpeciesDetails> { _ in false })
-    }
-
     // Initialize for existing entries from Floradex
     init(entry: DexEntry, namespace: Namespace.ID? = nil) {
-        // Create a placeholder viewModel for existing entries (not used for identification)
-        let dummyImageService = ImageSelectionService.shared
-        let container = try! ModelContainer(for: SpeciesDetails.self, DexEntry.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
-        let dummySpeciesRepo = SpeciesRepository(modelContext: container.mainContext)
-        let dummyDexRepo = DexRepository(modelContext: container.mainContext)
-
-        self._viewModel = ObservedObject(wrappedValue: ClassificationViewModel(imageService: dummyImageService, speciesRepository: dummySpeciesRepo, dexRepository: dummyDexRepo))
-        self.identifiedImage = nil
         self.existingEntry = entry
         let latinName = entry.latinName
         self._queriedSpeciesDetails = Query(filter: #Predicate<SpeciesDetails> { $0.latinName == latinName })
@@ -91,10 +74,6 @@ struct PlantDetailsView: View {
                                 .padding(.vertical, Theme.Metrics.Padding.medium)
                                 .opacity(contentAppeared ? 1 : 0)
                                 .offset(y: contentAppeared ? 0 : 30)
-                            } else if viewModel.isLoading && identifiedImage != nil {
-                                MultiServiceProgressView(viewModel: viewModel)
-                                    .padding()
-                                    .frame(minHeight: 400)
                             } else {
                                 emptyStateView
                                     .frame(minHeight: 400)
@@ -152,16 +131,6 @@ struct PlantDetailsView: View {
                 withAnimation(AnimationConstants.smoothSpring) {
                     contentAppeared = true
                 }
-            }
-        }
-        .onChange(of: viewModel.details) { newDetails in
-            if existingEntry == nil {
-                self.speciesDetails = newDetails
-            }
-        }
-        .onChange(of: viewModel.currentDexEntry) { newEntry in
-            if existingEntry == nil {
-                self.currentEntry = newEntry
             }
         }
     }
@@ -389,19 +358,14 @@ struct PlantDetailsView: View {
     // MARK: - Helper Methods
     
     private var displayedImage: UIImage? {
-        if let identified = identifiedImage { return identified }
         if let snapshotData = existingEntry?.snapshot, let img = UIImage(data: snapshotData) { return img }
         return nil
     }
-    
+
     private func setupData() {
         if let entry = existingEntry {
             currentEntry = entry
             speciesDetails = queriedSpeciesDetails.first
-        } else if identifiedImage != nil {
-            Task {
-                await viewModel.processSelectedImage()
-            }
         }
     }
 }
