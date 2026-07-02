@@ -265,20 +265,3 @@ struct ServiceProgressRow: View {
     }
 }
 
-#if DEBUG
-struct MultiServiceProgressView_Previews: PreviewProvider {
-    static var previews: some View {
-        // Create a mock view model
-        let viewModel = ClassificationViewModel(
-            imageService: ImageSelectionService.shared,
-            speciesRepository: SpeciesRepository(modelContext: ModelContext(ModelContainer(for: SpeciesDetails.self))),
-            dexRepository: DexRepository(modelContext: ModelContext(ModelContainer(for: DexEntry.self)))
-        )
-        
-        MultiServiceProgressView(viewModel: viewModel)
-            .padding()
-            .background(Theme.Colors.systemBackground)
-            .previewLayout(.sizeThatFits)
-    }
-}
-#endif

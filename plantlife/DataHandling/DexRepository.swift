@@ -54,13 +54,12 @@ class DexRepository {
         case .alpha:
             sortDescriptors.append(SortDescriptor(\DexEntry.latinName, order: .forward))
         case .tag(let tagValue):
-            // This requires filtering, not just sorting. 
-            // For a pure sort, you might sort by first tag or similar.
-            // Here we demonstrate filtering then sorting by ID.
-            let predicate = #Predicate<DexEntry> { $0.tags.contains(tagValue) }
-            let fetchDescriptor = FetchDescriptor<DexEntry>(predicate: predicate, sortBy: [SortDescriptor(\DexEntry.id)])
+            // Filter in memory: a #Predicate containment over the [String]
+            // tags attribute is not translatable by the SwiftData store and
+            // crashes at fetch time on iOS 26.
+            let fetchDescriptor = FetchDescriptor<DexEntry>(sortBy: [SortDescriptor(\DexEntry.id)])
             do {
-                return try modelContext.fetch(fetchDescriptor)
+                return try modelContext.fetch(fetchDescriptor).filter { $0.tags.contains(tagValue) }
             } catch {
                 print("Error fetching entries by tag: \(error)")
                 return []
@@ -86,7 +85,10 @@ class DexRepository {
         // try? modelContext.save() // if explicit save is desired
     }
 
-    /// Deletes a specific DexEntry from the store.
+    /// Deletes a specific DexEntry from the store. The entry's number is
+    /// retired, never reassigned: dex numbers are permanent, and the old
+    /// renumbering pass also crashed on iOS 26 (a detached task reassigning
+    /// unique ids raced context teardown).
     func delete(_ entry: DexEntry) {
         modelContext.delete(entry)
         do {
@@ -94,8 +96,6 @@ class DexRepository {
         } catch {
             print("DexRepository: failed to save context after delete: \(error)")
         }
-        // After deletion, renumber remaining entries sequentially
-        Task { await renumberEntries() }
     }
     
     /// Updates the sprite data for a specific DexEntry.
@@ -161,21 +161,4 @@ class DexRepository {
         // For now, the above sort and pick first is a common workaround for auto-incrementing style IDs.
     }
 
-    /// Renumber DexEntry IDs sequentially after deletions so the # stays compact.
-    @MainActor
-    func renumberEntries() async {
-        let fetchDescriptor = FetchDescriptor<DexEntry>(sortBy: [SortDescriptor(\DexEntry.id)])
-        guard let entries = try? modelContext.fetch(fetchDescriptor) else { return }
-        var updated = false
-        for (index, entry) in entries.enumerated() {
-            let targetId = index + 1
-            if entry.id != targetId {
-                entry.id = targetId
-                updated = true
-            }
-        }
-        if updated {
-            do { try modelContext.save() } catch { print("DexRepository: renumber save error \(error)") }
-        }
-    }
-} 
+}

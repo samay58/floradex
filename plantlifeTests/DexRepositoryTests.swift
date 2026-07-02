@@ -68,7 +68,7 @@ final class DexRepositoryTests: XCTestCase {
     }
 
     func testUpdateEntry() async throws {
-        let initialEntry = try await repository.addEntry(latinName: "Sansevieria trifasciata", snapshot: nil, tags: ["Bedroom"], notes: "Original note")
+        let initialEntry = try await repository.addEntry(latinName: "Sansevieria trifasciata", snapshot: nil, tags: ["Bedroom"])
         let entryId = initialEntry.id
 
         let newTags = ["Bedroom", "Low Light"]

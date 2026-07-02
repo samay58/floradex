@@ -111,6 +111,33 @@ final class SpeciesDetails: Identifiable, Codable, Sendable {
     }
 }
 
+// Sunlight requirement parsed from the free-text `sunlight` field.
+// Moved here from a deleted gauge view; PlantDetailsView and
+// DetailContentViews render from it.
+enum SunlightLevel: String, CaseIterable, Identifiable {
+    case fullSun = "Full Sun"
+    case partialSun = "Partial Sun"
+    case shade = "Shade"
+
+    var id: String { self.rawValue }
+
+    var iconName: String {
+        switch self {
+        case .fullSun: return "sun.max.fill"
+        case .partialSun: return "cloud.sun.fill"
+        case .shade: return "cloud.fill"
+        }
+    }
+
+    var gaugeValue: Int {
+        switch self {
+        case .shade: return 1
+        case .partialSun: return 3
+        case .fullSun: return 5
+        }
+    }
+}
+
 // MARK: - Parsed Properties for Gauges
 extension SpeciesDetails {
     // Additional properties that might exist from various data sources

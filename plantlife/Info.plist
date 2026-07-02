@@ -2,14 +2,6 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>UIAppFonts</key>
-	<array>
-		<string>MPLUS1Code-Regular.ttf</string>
-		<string>PressStart2P-Regular.ttf</string>
-		<string>JetBrainsMono-Regular.ttf</string>
-		<string>JetBrainsMono-Medium.ttf</string>
-		<string>JetBrainsMono-Bold.ttf</string>
-	</array>
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>NSAppTransportSecurity</key>
@@ -19,7 +11,5 @@
 	</dict>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
-	<key>NSSupportsLiveActivities</key>
-	<true/>
 </dict>
 </plist>
