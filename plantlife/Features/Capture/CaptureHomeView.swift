@@ -67,6 +67,17 @@ struct CaptureHomeView: View {
         case .ready:
             CameraPreviewView(source: model.camera.previewSource)
                 .ignoresSafeArea()
+                // Seats the hardware keys against any scene the camera shows.
+                .overlay(alignment: .bottom) {
+                    LinearGradient(
+                        colors: [.clear, .black.opacity(0.30)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    .frame(height: 220)
+                    .ignoresSafeArea()
+                    .allowsHitTesting(false)
+                }
         case .denied:
             FallbackBackground(
                 symbol: "video.slash",
@@ -91,11 +102,9 @@ struct CaptureHomeView: View {
     private var controls: some View {
         HStack(spacing: 44) {
             PhotosPicker(selection: $pickerItem, matching: .images) {
-                Image(systemName: "photo.on.rectangle")
-                    .font(.title2)
-                    .frame(width: 52, height: 52)
-                    .background(.regularMaterial, in: Circle())
+                CameraKey(systemImage: "photo.on.rectangle")
             }
+            .buttonStyle(FloraPressStyle())
             .disabled(!model.canStartCapture)
 
             ShutterButton(enabled: model.canStartCapture && model.cameraAvailability == .ready) {
@@ -106,11 +115,9 @@ struct CaptureHomeView: View {
             Button {
                 model.imported(SampleLeaf.image())
             } label: {
-                Image(systemName: "leaf.circle")
-                    .font(.title2)
-                    .frame(width: 52, height: 52)
-                    .background(.regularMaterial, in: Circle())
+                CameraKey(systemImage: "leaf.circle")
             }
+            .buttonStyle(FloraPressStyle())
             .disabled(!model.canStartCapture)
             .accessibilityLabel("Identify a sample leaf")
             #else
@@ -121,36 +128,113 @@ struct CaptureHomeView: View {
     }
 }
 
-/// The mechanical shutter: a machined ring whose inner disc compresses on
-/// press, so the button itself feels like a camera part.
+/// The shutter as a piece of hardware: a warm ceramic housing holding a
+/// convex green glass key, lit from above. The key visibly depresses, its
+/// gloss compresses, and the housing shadow tightens, so the press reads
+/// physical before the capture haptic lands.
 private struct ShutterButton: View {
     let enabled: Bool
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            ZStack {
-                Circle()
-                    .strokeBorder(.white.opacity(0.9), lineWidth: 4)
-                    .frame(width: 76, height: 76)
-                Circle()
-                    .fill(.white)
-                    .frame(width: 62, height: 62)
-            }
-            .shadow(color: .black.opacity(0.25), radius: 6, y: 2)
-            .opacity(enabled ? 1 : 0.4)
+            // Face is drawn by the style so every layer tracks isPressed.
+            Color.clear.frame(width: 84, height: 84)
         }
-        .buttonStyle(ShutterPressStyle())
+        .buttonStyle(ShutterKeyStyle())
         .disabled(!enabled)
+        .saturation(enabled ? 1 : 0)
+        .opacity(enabled ? 1 : 0.55)
         .accessibilityLabel("Capture plant photo")
     }
 }
 
-private struct ShutterPressStyle: ButtonStyle {
+private struct ShutterKeyStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.92 : 1)
-            .animation(Floradex.Motion.press, value: configuration.isPressed)
+        ZStack {
+            housing(pressed: configuration.isPressed)
+            key(pressed: configuration.isPressed)
+        }
+        .animation(Floradex.Motion.press, value: configuration.isPressed)
+    }
+
+    /// Warm ceramic ring, top-lit, resting on two shadow layers that
+    /// tighten when pressed.
+    private func housing(pressed: Bool) -> some View {
+        Circle()
+            .fill(
+                LinearGradient(
+                    colors: [.floraPaper, .floraGround],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
+            .overlay(Circle().strokeBorder(.black.opacity(0.08), lineWidth: 0.75))
+            .frame(width: 84, height: 84)
+            .shadow(color: .black.opacity(0.20), radius: pressed ? 5 : 11, y: pressed ? 3 : 7)
+            .shadow(color: .black.opacity(0.10), radius: 2, y: 1)
+    }
+
+    /// The green key: convex gradient with an inner bevel, a glass gloss
+    /// cap, and the macro-flower mark embossed in white.
+    private func key(pressed: Bool) -> some View {
+        ZStack {
+            Circle()
+                .fill(
+                    LinearGradient(
+                        colors: pressed
+                            ? [Color(red: 0.14, green: 0.56, blue: 0.36), Color(red: 0.10, green: 0.46, blue: 0.29)]
+                            : [Color(red: 0.30, green: 0.83, blue: 0.55), Color(red: 0.12, green: 0.57, blue: 0.36)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    .shadow(.inner(color: .white.opacity(0.45), radius: 1, y: 1.5))
+                    .shadow(.inner(color: Color(red: 0.04, green: 0.30, blue: 0.18).opacity(0.55), radius: 3, y: -2))
+                )
+            Ellipse()
+                .fill(
+                    LinearGradient(
+                        colors: [.white.opacity(pressed ? 0.22 : 0.42), .white.opacity(0)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+                .frame(width: 50, height: 28)
+                .offset(y: -16)
+            Image(systemName: "camera.macro")
+                .font(.system(size: 24, weight: .semibold))
+                .foregroundStyle(.white)
+                .shadow(color: Color(red: 0.05, green: 0.33, blue: 0.20).opacity(0.6), radius: 0.5, y: 1)
+        }
+        .frame(width: 68, height: 68)
+        .scaleEffect(pressed ? 0.93 : 1)
+    }
+}
+
+/// The shutter's smaller siblings: warm ceramic keys with the same top
+/// light, carrying their marks in ink green.
+private struct CameraKey: View {
+    let systemImage: String
+
+    var body: some View {
+        Image(systemName: systemImage)
+            .font(.system(size: 19, weight: .medium))
+            .foregroundStyle(Color.floraPixelInk)
+            .frame(width: 52, height: 52)
+            .background(
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [.floraPaper, .floraGround],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                        .shadow(.inner(color: .white.opacity(0.5), radius: 1, y: 1))
+                    )
+            )
+            .overlay(Circle().strokeBorder(.black.opacity(0.08), lineWidth: 0.75))
+            .shadow(color: .black.opacity(0.14), radius: 6, y: 3)
+            .contentShape(Circle())
     }
 }
 
