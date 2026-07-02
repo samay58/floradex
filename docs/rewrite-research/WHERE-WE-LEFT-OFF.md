@@ -1,6 +1,8 @@
 # Where we left off
 
-Updated 2026-07-02 (evening), end of the design identity session. Branch `rewrite/foundation`.
+Updated 2026-07-02 (night), after the pre-merge review round and the merge to main. Branch `rewrite/foundation` (kept for phases 7 and 8); main fast-forwarded to the same commit and both pushed.
+
+Before merging, six independent review angles swept the session diff and surfaced fourteen findings, all fixed in one round (commit `2084200`): the sprite arrival animation actually runs now, Reduce Motion crossfades instead of hard-cutting, the confidence seal speaks its raw number to VoiceOver and keeps the band word beside it in raw mode, disabled camera keys desaturate, empty search and all-deleted collections have designed states, gap tiles hold position during Select, the entry harness can't double-push, PixelScaledImage is display-scale aware in both directions, and the plate/matte/chip recipes plus env-flag reads consolidated into shared homes (SpecimenPlate.swift, DebugFlags.swift). Zero project warnings, 101 kit tests, 7 app tests at the merge point.
 
 ## Update, 2026-07-02 evening: the design identity session
 
