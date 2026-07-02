@@ -15,7 +15,7 @@ import Testing
     @Test func layoutMatchesSpec() {
         let id = EntryID()
         let uuid = id.rawValue.uuidString
-        #expect(policy.originalPhotoURL(for: id).path().hasSuffix("photos/\(uuid)/original.heic"))
+        #expect(policy.originalPhotoURL(for: id).path().hasSuffix("photos/\(uuid)/original.jpg"))
         #expect(policy.spriteURL(for: id, version: 3).path().hasSuffix("sprites/\(uuid)/sprite-v3.png"))
     }
 

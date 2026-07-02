@@ -3,7 +3,7 @@ import Foundation
 /// On-disk layout for entry media. Images never live in the database;
 /// the store persists paths derived here.
 ///
-/// Layout: `photos/{entry-uuid}/original.heic` and
+/// Layout: `photos/{entry-uuid}/original.jpg` and
 /// `sprites/{entry-uuid}/sprite-v{N}.png`. Sprites are versioned so a
 /// corrupted or superseded file never takes down an entry; readers fall back
 /// to the newest version that loads.
@@ -23,7 +23,7 @@ public struct MediaPathPolicy: Hashable, Sendable {
     }
 
     public func originalPhotoURL(for id: EntryID) -> URL {
-        photoDirectory(for: id).appending(component: "original.heic")
+        photoDirectory(for: id).appending(component: "original.jpg")
     }
 
     public func spriteURL(for id: EntryID, version: Int) -> URL {

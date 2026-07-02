@@ -10,12 +10,12 @@ import UIKit
 @MainActor
 enum CaptureComposition {
     static func makeModel(
-        dexRepository: DexRepository,
-        speciesRepository: SpeciesRepository
+        store: SwiftDataDexStore,
+        media: FileMediaStore
     ) -> CaptureFlowModel {
         #if DEBUG
         if ProcessInfo.processInfo.environment["FLORADEX_FIXTURES"] == "1" {
-            return fixtureModel(dexRepository: dexRepository, speciesRepository: speciesRepository)
+            return fixtureModel(store: store, media: media)
         }
         #endif
 
@@ -40,15 +40,15 @@ enum CaptureComposition {
             orchestrator: orchestrator,
             detailsProvider: OpenAIDetailsProvider(broker: broker),
             spriteProvider: OpenAISpriteProvider(broker: broker),
-            dexRepository: dexRepository,
-            speciesRepository: speciesRepository
+            store: store,
+            media: media
         )
     }
 
     #if DEBUG
     private static func fixtureModel(
-        dexRepository: DexRepository,
-        speciesRepository: SpeciesRepository
+        store: SwiftDataDexStore,
+        media: FileMediaStore
     ) -> CaptureFlowModel {
         let monstera = Species(
             latinName: "Monstera deliciosa",
@@ -77,8 +77,8 @@ enum CaptureComposition {
             orchestrator: orchestrator,
             detailsProvider: CannedDetailsProvider(species: monstera),
             spriteProvider: CannedSpriteProvider(),
-            dexRepository: dexRepository,
-            speciesRepository: speciesRepository
+            store: store,
+            media: media
         )
     }
     #endif

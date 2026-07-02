@@ -6,7 +6,7 @@ Command: `xcodebuild -project plantlife.xcodeproj -scheme floradex -destination 
 
 **Total: 140 warnings.** This number must only shrink. New code merges with zero warnings; the legacy carriers below are scheduled for deletion in phases 4 and 5, which is how most of this count disappears.
 
-Checkpoints since the snapshot (same command): 102 after the phase 4/5 waves; 78 after the de-sloppify pass (InfoCardView and SkeletonView deleted with eleven other dead files, repositories rewritten). Remaining carriers are AnimationConstants (dies with LiquidTabBar in phase 5), the asset catalog, and the SwiftData keypath-Sendability class on the v1 models (dies with the v2 schema).
+Checkpoints since the snapshot (same command): 102 after the phase 4/5 waves; 78 after the de-sloppify pass (InfoCardView and SkeletonView deleted with eleven other dead files, repositories rewritten); 20 after phase 5 completion (AnimationConstants, LiquidTabBar, and the whole legacy collection subtree deleted). What remains: six asset-catalog app-icon warnings (phase 8 owns the icon set), toolchain noise from appintentsmetadataprocessor, and the SwiftData keypath-Sendability class now confined to `SwiftDataDexStore`'s `#Predicate`/`SortDescriptor` uses; Swift 6 mode's Sendable key-path inference is expected to clear that class at the phase 6 flip, which should be verified during the flip rather than assumed.
 
 Top carriers by file:
 

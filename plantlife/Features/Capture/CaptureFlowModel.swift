@@ -27,10 +27,11 @@ final class CaptureFlowModel {
     private let orchestrator: IdentificationOrchestrator
     private let detailsProvider: any SpeciesDetailsProvider
     private let spriteProvider: any SpriteGenerationProvider
-    private let dexRepository: DexRepository
-    private let speciesRepository: SpeciesRepository
+    private let store: SwiftDataDexStore
+    private let media: FileMediaStore
     private let recorder: any PerceivedQualityRecorder
     private let reducer = IdentificationFlowReducer()
+    private let encoder = PayloadEncoder()
     private let logger = Logger(subsystem: "samayd.floradex", category: "capture-flow")
 
     private var identificationTask: Task<Void, Never>?
@@ -42,16 +43,16 @@ final class CaptureFlowModel {
         orchestrator: IdentificationOrchestrator,
         detailsProvider: any SpeciesDetailsProvider,
         spriteProvider: any SpriteGenerationProvider,
-        dexRepository: DexRepository,
-        speciesRepository: SpeciesRepository,
+        store: SwiftDataDexStore,
+        media: FileMediaStore,
         recorder: any PerceivedQualityRecorder = SignpostQualityRecorder()
     ) {
         self.camera = camera
         self.orchestrator = orchestrator
         self.detailsProvider = detailsProvider
         self.spriteProvider = spriteProvider
-        self.dexRepository = dexRepository
-        self.speciesRepository = speciesRepository
+        self.store = store
+        self.media = media
         self.recorder = recorder
     }
 
@@ -190,14 +191,12 @@ final class CaptureFlowModel {
                 self.handle(event)
             }
         }
-        // Detached so the JPEG encode of a full-size capture never contends
-        // with the shutter's optimistic freeze-frame on the main actor.
-        identificationTask = Task.detached(priority: .userInitiated) { [orchestrator] in
-            guard let data = image.resized(maxSide: 1024).jpegData(compressionQuality: 0.85) else {
+        identificationTask = Task { [orchestrator, encoder] in
+            guard let payload = await encoder.encode(image) else {
                 onEvent(.failed(.cancelled))
                 return
             }
-            _ = await orchestrator.identify(ImagePayload(format: .jpeg, data: data), onEvent: onEvent)
+            _ = await orchestrator.identify(payload, onEvent: onEvent)
         }
     }
 
@@ -219,83 +218,91 @@ final class CaptureFlowModel {
     }
 
     /// Details and duplicate checks run beside the undo window; neither may
-    /// delay the reveal.
+    /// delay the reveal. Details persist to the species record on arrival,
+    /// even when they land after commit.
     private func startEnrichment(for species: Species) {
-        duplicateOfNumber = dexRepository.all()
-            .first { Species.normalizeLatinName($0.latinName) == species.normalizedKey }?
-            .id
+        Task { [weak self, store] in
+            let existing = await store.existingEntry(for: species)
+            self?.duplicateOfNumber = existing?.number.value
+        }
 
         detailsTask?.cancel()
         detailsTask = Task { [weak self, detailsProvider] in
             guard let content = try? await detailsProvider.details(for: species) else { return }
             await MainActor.run { [weak self] in
-                self?.details = content
+                guard let self else { return }
+                self.details = content
+                self.store.updateDetails(content)
             }
         }
     }
 
     private func commitProvisional() {
-        guard case .committing(_, let result) = state else { return }
+        guard case .committing(let captureID, let result) = state else { return }
         let image = frozenImage
-        let content = details
+        let tags = details.map { TagPolicy.tags(for: $0) } ?? []
         Task { [weak self] in
             guard let self else { return }
             do {
-                var tags: [String] = []
-                if let content {
-                    let legacy = self.legacyDetails(from: content, latinName: result.species.latinName)
-                    self.speciesRepository.saveSpeciesDetails(legacy)
-                    tags = TagGenerator.generateTags(from: legacy)
-                }
-                let entry = try await self.dexRepository.addEntry(
-                    latinName: result.species.latinName,
-                    snapshot: image,
+                let committed = try await self.store.commit(ProvisionalEntry(
+                    captureID: captureID,
+                    result: result,
+                    createdAt: Date(),
                     tags: tags
-                )
+                ))
+                if let image, let original = await self.encoder.encodeOriginal(image) {
+                    _ = try? await self.media.writeOriginalPhoto(original, for: committed.id)
+                }
                 HeroHaptics.saveSuccess()
-                self.send(.commitSucceeded(DexNumber(entry.id)))
-                self.startSprite(for: result.species, entryID: entry.id)
+                self.send(.commitSucceeded(committed.number))
+                self.startSprite(for: result.species, entry: committed)
             } catch {
                 self.send(.commitFailed(String(describing: error)))
             }
         }
     }
 
-    private func startSprite(for species: Species, entryID: Int) {
-        Task { [weak self, spriteProvider] in
+    private func startSprite(for species: Species, entry: CommittedEntry) {
+        Task { [weak self, spriteProvider, media] in
             do {
                 let data = try await spriteProvider.sprite(for: species)
                 guard let image = UIImage(data: data) else {
                     throw ProviderError.invalidResponse("sprite data was not an image")
                 }
                 let stored = image.resized(maxSide: 256).pngData() ?? data
-                try await self?.dexRepository.updateSprite(for: entryID, spriteData: stored)
+                try await media.writeSprite(stored, for: entry.id, version: 1)
                 await MainActor.run { [weak self] in
+                    guard let self else { return }
+                    try? self.store.setSpriteVersion(1, for: entry.number)
                     // The card may already be showing a later capture; a slow
                     // sprite must not paint onto it. Persistence above stands.
-                    guard let self, case .committed(_, let number) = self.state,
-                          number.value == entryID else { return }
+                    guard case .committed(_, let number) = self.state,
+                          number == entry.number else { return }
                     self.spriteImage = image
                     self.recorder.record(.spriteShown)
                 }
             } catch {
-                try? await self?.dexRepository.markSpriteGenerationFailed(for: entryID)
+                await MainActor.run { [weak self] in
+                    try? self?.store.markSpriteFailed(for: entry.number)
+                }
             }
         }
     }
 
-    private func legacyDetails(from content: SpeciesDetailsContent, latinName: String) -> SpeciesDetails {
-        SpeciesDetails(
-            latinName: latinName,
-            commonName: content.species.commonName,
-            summary: content.summary,
-            sunlight: content.care.sunlight,
-            water: content.care.water,
-            soil: content.care.soil,
-            temperature: content.care.temperature,
-            bloomTime: content.care.bloomTime,
-            funFacts: content.funFacts.isEmpty ? nil : content.funFacts,
-            lastUpdated: content.source.generatedAt
-        )
+    /// Owns the resize-and-encode of the capture payload so a full-size
+    /// photo never contends with the shutter's optimistic freeze-frame on
+    /// the main actor.
+    private actor PayloadEncoder {
+        func encode(_ image: UIImage) -> ImagePayload? {
+            guard let data = image.resized(maxSide: 1024).jpegData(compressionQuality: 0.85) else {
+                return nil
+            }
+            return ImagePayload(format: .jpeg, data: data)
+        }
+
+        /// Full-resolution archival copy for the entry's media directory.
+        func encodeOriginal(_ image: UIImage) -> Data? {
+            image.jpegData(compressionQuality: 0.9)
+        }
     }
 }

@@ -18,14 +18,14 @@ xcodebuild -project plantlife.xcodeproj -scheme floradex test -destination 'plat
 # Run a single test class or method
 xcodebuild -project plantlife.xcodeproj -scheme floradex test \
   -destination 'platform=iOS Simulator,name=iPhone 16' \
-  -only-testing:plantlifeTests/DexRepositoryTests/testAddEntryAndAutoIncrementId
+  -only-testing:plantlifeTests/SwiftDataDexStoreTests/testDeleteRetiresTheNumberForever
 ```
 
 If XcodeBuildMCP tools are available, prefer them over raw xcodebuild.
 
 API keys are development environment variables (`KINDWISE_API_KEY`, `PLANTNET_API_KEY`, `OPENAI_API_KEY`) resolved through `CredentialBroker` at request time; there is no xcconfig path and nothing key-shaped in the repo. `FLORADEX_FIXTURES=1` runs the app with no keys at all.
 
-## Architecture (rewrite in progress, phases 2 through 4 landed)
+## Architecture (rewrite in progress, phases 2 through 5 landed)
 
 Read `docs/rewrite-research/floradex-rewrite-spec.md` before any structural change; it defines the architecture, the 8-phase plan, and what is deliberately deferred. `docs/rewrite-research/floradex-modern-ios-research.md` holds the platform decisions with sources. Branch: `rewrite/foundation`.
 
@@ -35,14 +35,14 @@ Read `docs/rewrite-research/floradex-rewrite-spec.md` before any structural chan
 
 **Credentials**: all provider calls resolve keys through `CredentialBroker` at request time (env vars `KINDWISE_API_KEY`, `PLANTNET_API_KEY`, `OPENAI_API_KEY` in development; a Cloudflare Workers + App Attest proxy broker replaces it before release). Missing keys throw typed `.credentialMissing` errors; there are no silent no-ops and no keys in the binary.
 
-**Legacy surfaces still standing** (die in phase 5 remainder): `FloradexCollectionView`/`DexGrid`/`DexCard`, entry-only `PlantDetailsView`, `LiquidTabBar` root, v1 `@Model` classes (`DexEntry`, `SpeciesDetails`, joined by `latinName` string), `@MainActor` repositories in `DataHandling/`. The v2 schema (real relationship, persisted number ledger, media on disk) is specced but not yet built.
+**Persistence (v2, phase 5)**: `plantlife/Models/FloradexSchema.swift` holds both versioned schemas; `FloradexMigrationPlan` migrates v1 stores in place (numbers freeze, gaps become ledger tombstones, image blobs export to disk). `SwiftDataDexStore` implements the Kit's `DexStore` seam over `DexEntryV2`/`SpeciesRecord`/`DexLedger` and is the schema's single writer. Media lives under `MediaLocations.root` keyed by each entry's `mediaID` through the Kit's `MediaPathPolicy`/`FileMediaStore`. Collection surfaces are `Features/Dex/DexGridView` (grid, list escape hatch, search, sort, batch delete) and `Features/Entry/EntryDetailView`; the root is a native `TabView` in `PlantLifeApp.swift` (`FLORADEX_TAB=dex` preselects the collection in DEBUG). No legacy surfaces remain.
 
-**Tests**: Kit logic in Swift Testing (96 tests, `swift test`); app unit tests in XCTest on simulator (`-only-testing:plantlifeTests`, use `-parallel-testing-enabled NO`). The 16-case fixture corpus in `FloradexKitFixtures` replays through the real escalation engine and orchestrator.
+**Tests**: Kit logic in Swift Testing (100 tests, `swift test`); app unit tests in XCTest on simulator (`-only-testing:plantlifeTests`, use `-parallel-testing-enabled NO`): the seeded v1-to-v2 migration test plus the SwiftData store suite. The 16-case fixture corpus in `FloradexKitFixtures` replays through the real escalation engine and orchestrator.
 
 ## Rewrite status and rules
 
-- Done: phase 2 (dead code wave 1, test repair, iOS 26 crash fixes), phase 3 (project wiring, deployment target 26.0, strict-concurrency warnings), phase 4 (Kit orchestrator + provider clients + hero loop UI, old pipeline deleted in wave 2).
-- Next: phase 5 remainder (SwiftData v2 schema + migration test, new dex grid/detail surfaces, native TabView root), phase 6 (trust states, `SWIFT_VERSION` 6 flip), phase 7 (fixture assets, Maestro/XCUITest), phase 8 (polish, proxy scaffold in `proxy/`).
+- Done: phase 2 (dead code wave 1, test repair, iOS 26 crash fixes), phase 3 (project wiring, deployment target 26.0, strict-concurrency warnings), phase 4 (Kit orchestrator + provider clients + hero loop UI), phase 5 (v2 schema + migration, new dex/entry surfaces, native TabView root, all legacy deleted).
+- Next: phase 6 (trust states, `SWIFT_VERSION` 6 flip), phase 7 (fixture assets, Maestro/XCUITest), phase 8 (polish, proxy scaffold in `proxy/`).
 - Never hand-edit `project.pbxproj`; use `scripts/wire_floradexkit.rb` as the pattern (xcodeproj gem, checkpoint commit, line-by-line diff review, green build) for any further project mutations.
-- Warning budget: 78 at last build (`docs/rewrite-research/warning-baseline.md` started at 140); the count must only shrink, and new code merges with zero warnings.
+- Warning budget: 20 at last build (`docs/rewrite-research/warning-baseline.md` started at 140); the count must only shrink, and new code merges with zero warnings.
 - Path note: `/Users/samaydhawan/floradex` is a symlink to this checkout, not a separate worktree.

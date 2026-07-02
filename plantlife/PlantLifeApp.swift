@@ -1,122 +1,72 @@
 import SwiftUI
 import SwiftData
 import FloradexKit
-import os
 
 @main
 struct PlantLifeApp: App {
-    // State properties for ModelContainer and SpeciesRepository
     let modelContainer: ModelContainer
-    let speciesRepository: SpeciesRepository
-    let dexRepository: DexRepository
+    let store: SwiftDataDexStore
+    let media: FileMediaStore
 
     init() {
         do {
-            // Define the schema including all SwiftData @Model classes
-            let schema = Schema([
-                SpeciesDetails.self,
-                DexEntry.self
-                // Add any other @Model classes here in the future
-            ])
-
-            // Configure the ModelContainer (e.g., for iCloud, App Groups, or just local storage)
-            // isStoredInMemoryOnly: false for persistent storage, true for temporary in-memory (e.g., for previews or testing)
-            let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
-
-            // Initialize the ModelContainer
-            modelContainer = try ModelContainer(for: schema, configurations: [modelConfiguration])
-
-            // Initialize the SpeciesRepository with the main context from the container
-            speciesRepository = SpeciesRepository(modelContext: modelContainer.mainContext)
-            dexRepository = DexRepository(modelContext: modelContainer.mainContext)
-
-            // Linkage proof for the FloradexKit package (rewrite phase 3);
-            // the hero-loop rebuild replaces this with real orchestrator use.
-            Logger(subsystem: "samayd.floradex", category: "rewrite")
-                .debug("FloradexKit linked; standard escalation steps: \(EscalationPolicy.standard.steps.count)")
-
+            let schema = Schema(versionedSchema: FloradexSchemaV2.self)
+            modelContainer = try ModelContainer(
+                for: schema,
+                migrationPlan: FloradexMigrationPlan.self,
+                configurations: [ModelConfiguration(schema: schema)]
+            )
         } catch {
-            // If the container fails to initialize, it's a critical error.
-            // Consider more robust error handling or user feedback in a production app.
-            fatalError("Failed to initialize SwiftData ModelContainer: \(error.localizedDescription)")
+            fatalError("Failed to initialize SwiftData ModelContainer: \(error)")
         }
+        store = SwiftDataDexStore(modelContext: modelContainer.mainContext)
+        media = FileMediaStore(root: MediaLocations.root)
     }
 
     var body: some Scene {
         WindowGroup {
-            PlantLifeContentView(
-                speciesRepository: speciesRepository,
-                dexRepository: dexRepository
-            )
+            RootTabView(store: store, media: media)
         }
         .modelContainer(modelContainer)
     }
 }
 
-// Separate view to properly manage @StateObject instances
-struct PlantLifeContentView: View {
-    let speciesRepository: SpeciesRepository
-    let dexRepository: DexRepository
-    
-    @StateObject private var floradexViewModel: FloradexCollectionViewModel
-    @State private var captureModel: CaptureFlowModel
-    @State private var selectedTab = 0
-
-    init(speciesRepository: SpeciesRepository, dexRepository: DexRepository) {
-        self.speciesRepository = speciesRepository
-        self.dexRepository = dexRepository
-
-        self._floradexViewModel = StateObject(wrappedValue: FloradexCollectionViewModel(
-            dexRepository: dexRepository
-        ))
-        self._captureModel = State(initialValue: CaptureComposition.makeModel(
-            dexRepository: dexRepository,
-            speciesRepository: speciesRepository
-        ))
+struct RootTabView: View {
+    enum TabID: String {
+        case identify, dex, profile
     }
-    
+
+    let store: SwiftDataDexStore
+    let media: FileMediaStore
+    @State private var captureModel: CaptureFlowModel
+    @State private var selection: TabID = .identify
+
+    init(store: SwiftDataDexStore, media: FileMediaStore) {
+        self.store = store
+        self.media = media
+        self._captureModel = State(initialValue: CaptureComposition.makeModel(store: store, media: media))
+        #if DEBUG
+        // Demo and UI-test harness: FLORADEX_TAB=dex lands on the collection.
+        if let raw = ProcessInfo.processInfo.environment["FLORADEX_TAB"], let tab = TabID(rawValue: raw) {
+            self._selection = State(initialValue: tab)
+        }
+        #endif
+    }
+
     var body: some View {
-        LiquidTabView(
-            selection: $selectedTab,
-            tabs: [
-                ("magnifyingglass", "Identify"),
-                ("leaf.fill", "Floradex"),
-                ("person.fill", "Profile")
-            ]
-        ) {
-            ZStack {
-                // Removed print to avoid constant re-rendering logs
-                switch selectedTab {
-                case 0:
-                    CaptureHomeView(model: captureModel)
-                        .transition(.asymmetric(
-                            insertion: .move(edge: .trailing).combined(with: .opacity),
-                            removal: .move(edge: .leading).combined(with: .opacity)
-                        ))
-                case 1:
-                    FloradexCollectionView(viewModel: floradexViewModel)
-                        .transition(.asymmetric(
-                            insertion: .move(edge: selectedTab > 1 ? .leading : .trailing).combined(with: .opacity),
-                            removal: .move(edge: selectedTab > 1 ? .trailing : .leading).combined(with: .opacity)
-                        ))
-                case 2:
-                    ProfileView()
-                        .transition(.asymmetric(
-                            insertion: .move(edge: .leading).combined(with: .opacity),
-                            removal: .move(edge: .trailing).combined(with: .opacity)
-                        ))
-                default:
-                    EmptyView()
-                }
+        // An in-flight identification keeps running across tab switches;
+        // the reveal card is waiting when the user comes back.
+        TabView(selection: $selection) {
+            Tab("Identify", systemImage: "camera.viewfinder", value: TabID.identify) {
+                CaptureHomeView(model: captureModel)
             }
-            .animation(AnimationConstants.signatureSpring, value: selectedTab)
-        }
-        .onChange(of: selectedTab) { _, newValue in
-            // An in-flight identification keeps running across tab switches;
-            // the reveal card is waiting when the user comes back.
-            if newValue == 1 {
-                floradexViewModel.fetchEntries()
+            Tab("Floradex", systemImage: "leaf.fill", value: TabID.dex) {
+                DexGridView(store: store, media: media)
+            }
+            Tab("Profile", systemImage: "person.crop.circle", value: TabID.profile) {
+                ProfileView()
             }
         }
+        .tint(Theme.Colors.primaryGreen)
     }
 }
