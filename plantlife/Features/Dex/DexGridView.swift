@@ -5,6 +5,7 @@ import FloradexKit
 /// The collection tab: sprites, permanent numbers, honest gaps. Grid first
 /// with a plain-list escape hatch, search over names and tags, and a
 /// selection mode for batch delete (numbers retire, never reassign).
+/// Retired numbers stay visible in number order as quiet absences.
 struct DexGridView: View {
     enum SortOption: String, CaseIterable, Identifiable {
         case number = "Number"
@@ -17,6 +18,7 @@ struct DexGridView: View {
     let media: FileMediaStore
 
     @Query(sort: \DexEntryV2.number) private var entries: [DexEntryV2]
+    @Query private var ledgers: [DexLedger]
     @State private var searchText = ""
     @State private var sortOption: SortOption = .number
     @State private var showsList = false
@@ -34,6 +36,7 @@ struct DexGridView: View {
                     gridContent
                 }
             }
+            .background(Color.floraGround)
             .navigationTitle("Floradex")
             .searchable(text: $searchText, prompt: "Name or tag")
             .toolbar { toolbarContent }
@@ -65,15 +68,33 @@ struct DexGridView: View {
         }
     }
 
+    /// Grid cells: entries, with retired numbers interleaved as designed
+    /// absences. Gaps only appear in number order with nothing filtered and
+    /// no selection under way.
+    private var gridCells: [DexCell] {
+        let entryCells = visibleEntries.map(DexCell.entry)
+        guard sortOption == .number, searchText.isEmpty, !isSelecting,
+              let retired = ledgers.first?.retired, !retired.isEmpty else {
+            return entryCells
+        }
+        return (entryCells + retired.map(DexCell.gap))
+            .sorted { $0.number < $1.number }
+    }
+
     private func displayName(for entry: DexEntryV2) -> String {
         entry.species.map { $0.commonName ?? $0.latinName } ?? "Unknown"
     }
 
     private var gridContent: some View {
         ScrollView {
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 12)], spacing: 12) {
-                ForEach(visibleEntries) { entry in
-                    tile(for: entry)
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: Floradex.Space.m)], spacing: Floradex.Space.m) {
+                ForEach(gridCells) { cell in
+                    switch cell {
+                    case .entry(let entry):
+                        tile(for: entry)
+                    case .gap(let number):
+                        GapTile(number: number)
+                    }
                 }
             }
             .padding(.horizontal)
@@ -83,8 +104,10 @@ struct DexGridView: View {
     private var listContent: some View {
         List(visibleEntries) { entry in
             row(for: entry)
+                .listRowBackground(Color.clear)
         }
         .listStyle(.plain)
+        .scrollContentBackground(.hidden)
     }
 
     @ViewBuilder
@@ -164,12 +187,32 @@ struct DexGridView: View {
         }
     }
 
+    /// First-run scene: an empty plate waiting for its first specimen.
     private var emptyState: some View {
-        ContentUnavailableView {
-            Label("No plants yet", systemImage: "leaf")
-        } description: {
+        VStack(spacing: Floradex.Space.m) {
+            ZStack {
+                DitherField()
+                Image(systemName: "leaf.fill")
+                    .font(.system(size: 26))
+                    .foregroundStyle(Color.floraGreen.opacity(0.45))
+            }
+            .frame(width: 72, height: 72)
+            .background(Color.floraPaper)
+            .clipShape(RoundedRectangle(cornerRadius: Floradex.Radius.plate))
+            .overlay(
+                RoundedRectangle(cornerRadius: Floradex.Radius.plate)
+                    .strokeBorder(Color.floraHairline, style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+            )
+            .padding(.bottom, Floradex.Space.xs)
+            Text("No plants yet")
+                .font(.floraDisplay)
             Text("Identify your first plant and it lands here with a permanent number.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 48)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private func toggleSelection(_ number: Int) {
@@ -190,6 +233,26 @@ struct DexGridView: View {
     }
 }
 
+private enum DexCell: Identifiable {
+    case entry(DexEntryV2)
+    case gap(Int)
+
+    var number: Int {
+        switch self {
+        case .entry(let entry): return entry.number
+        case .gap(let number): return number
+        }
+    }
+
+    var id: String {
+        switch self {
+        case .entry: return "entry-\(number)"
+        case .gap: return "gap-\(number)"
+        }
+    }
+}
+
+/// A collected specimen: sprite plate, pixel number, name. Paper on ground.
 private struct DexTile: View {
     let entry: DexEntryV2
     let media: FileMediaStore
@@ -197,26 +260,55 @@ private struct DexTile: View {
     let isSelected: Bool?
 
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: Floradex.Space.s) {
             EntrySpriteView(entry: entry, media: media)
                 .frame(width: 96, height: 96)
             Text("#\(entry.number)")
-                .font(.headline.monospacedDigit())
-                .foregroundStyle(Color.floraGreen)
+                .font(.floraNumber(.tile))
+                .foregroundStyle(Color.floraPixelInk)
             Text(entry.species.map { $0.commonName ?? $0.latinName } ?? "Unknown")
                 .font(.caption)
                 .lineLimit(1)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 14)
-        .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 16))
+        .background(Color.floraPaper, in: RoundedRectangle(cornerRadius: Floradex.Radius.tile, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: Floradex.Radius.tile, style: .continuous)
+                .strokeBorder(Color.floraHairline, lineWidth: 1)
+        )
         .overlay(alignment: .topTrailing) {
             if let isSelected {
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                     .foregroundStyle(isSelected ? Color.floraGreen : .secondary)
-                    .padding(8)
+                    .padding(Floradex.Space.s)
             }
         }
+    }
+}
+
+/// A retired number: the slot stays, quietly. Numbers are never reused.
+private struct GapTile: View {
+    let number: Int
+
+    var body: some View {
+        VStack(spacing: Floradex.Space.s) {
+            Color.clear
+                .frame(width: 96, height: 96)
+            Text("#\(number)")
+                .font(.floraNumber(.tile))
+                .foregroundStyle(Color.floraPixelInk.opacity(0.28))
+            Text(" ")
+                .font(.caption)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 14)
+        .overlay(
+            RoundedRectangle(cornerRadius: Floradex.Radius.tile, style: .continuous)
+                .strokeBorder(Color.floraHairline.opacity(0.6), style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+        )
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Number \(number), retired")
     }
 }
 
@@ -226,7 +318,7 @@ private struct DexRow: View {
     let isSelected: Bool?
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: Floradex.Space.m) {
             EntrySpriteView(entry: entry, media: media)
                 .frame(width: 44, height: 44)
             VStack(alignment: .leading, spacing: 2) {
@@ -234,14 +326,14 @@ private struct DexRow: View {
                     .font(.body)
                 if let latin = entry.species?.latinName {
                     Text(latin)
-                        .font(.caption.italic())
+                        .font(.floraLatinSmall)
                         .foregroundStyle(.secondary)
                 }
             }
             Spacer()
             Text("#\(entry.number)")
-                .font(.subheadline.monospacedDigit())
-                .foregroundStyle(Color.floraGreen)
+                .font(.floraNumber(.row))
+                .foregroundStyle(Color.floraPixelInk)
             if let isSelected {
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                     .foregroundStyle(isSelected ? Color.floraGreen : .secondary)
@@ -250,8 +342,8 @@ private struct DexRow: View {
     }
 }
 
-/// Sprite from disk when one exists; otherwise the original photo as a
-/// thumbnail; otherwise a placeholder leaf.
+/// Sprite from disk when one exists (in its dithered plate); otherwise the
+/// original photo as a thumbnail; otherwise a placeholder leaf.
 struct EntrySpriteView: View {
     let entry: DexEntryV2
     let media: FileMediaStore
@@ -260,19 +352,24 @@ struct EntrySpriteView: View {
 
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 10)
-                .fill(Color.floraGreen.opacity(0.1))
+            DitherField()
             if let image {
                 Image(uiImage: image)
                     .resizable()
                     .interpolation(isSprite ? .none : .medium)
                     .scaledToFit()
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .padding(isSprite ? 6 : 0)
             } else {
                 Image(systemName: "leaf.fill")
                     .foregroundStyle(Color.floraGreen.opacity(0.45))
             }
         }
+        .background(Color.floraPaper)
+        .clipShape(RoundedRectangle(cornerRadius: Floradex.Radius.plate))
+        .overlay(
+            RoundedRectangle(cornerRadius: Floradex.Radius.plate)
+                .strokeBorder(Color.floraHairline, lineWidth: 1)
+        )
         .task(id: entry.spriteVersion) {
             let entryID = EntryID(rawValue: entry.mediaID)
             if entry.spriteVersion > 0, let sprite = await media.latestSprite(for: entryID),
