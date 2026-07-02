@@ -263,7 +263,7 @@ final class CaptureFlowModel {
                 if let image, let original = await self.encoder.encodeOriginal(image) {
                     _ = try? await self.media.writeOriginalPhoto(original, for: committed.id)
                 }
-                HeroHaptics.saveSuccess()
+                HeroHaptics.stamp()
                 self.send(.commitSucceeded(committed.number))
                 self.startSprite(for: result.species, entry: committed)
             } catch {
