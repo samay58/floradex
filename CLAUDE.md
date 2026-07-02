@@ -15,7 +15,7 @@ cp Secrets.xcconfig.example Secrets.xcconfig   # fill OPENAI_API_KEY, PLANTNET_A
 # Build for simulator
 xcodebuild -project plantlife.xcodeproj -scheme floradex -sdk iphonesimulator build
 
-# Run all tests (destination must name an installed simulator — check `xcrun simctl list devices`)
+# Run all tests (destination must name an installed simulator; check `xcrun simctl list devices`)
 xcodebuild -project plantlife.xcodeproj -scheme floradex test -destination 'platform=iOS Simulator,name=iPhone 16'
 
 # Run a single test class or method
@@ -31,32 +31,24 @@ If XcodeBuildMCP tools are available, prefer them over raw xcodebuild.
 
 Secrets resolution (`plantlife/Shared/Secrets.swift`): environment variables first, then build-time values from `Secrets.xcconfig`. Never commit `Secrets.xcconfig` or real keys.
 
-## Architecture
+## Architecture (rewrite in progress, phases 2 through 4 landed)
 
-**App composition** (`plantlife/PlantLifeApp.swift`): builds a SwiftData `ModelContainer` with the two `@Model` classes (`SpeciesDetails`, `DexEntry`), wraps its main context in two `@MainActor` repositories (`SpeciesRepository`, `DexRepository` in `DataHandling/`), and injects them into three tabs — Identify, Floradex (collection grid), Profile — via a custom `LiquidTabView`. Switching away from Identify cancels the in-flight pipeline via `ClassificationViewModel.cleanup()`.
+Read `docs/rewrite-research/floradex-rewrite-spec.md` before any structural change; it defines the architecture, the 8-phase plan, and what is deliberately deferred. `docs/rewrite-research/floradex-modern-ios-research.md` holds the platform decisions with sources. Branch: `rewrite/foundation`.
 
-**Identification pipeline** (`ViewModels/ClassificationViewModel.runPipeline`) — the core flow, an escalating cascade tuned to avoid paid API calls when possible:
+**The seam**: `FloradexKit/` is a local Swift package (Swift 6 mode, no SwiftUI/UIKit) linked into the app target. Domain logic, policies, the hero-loop reducer, the orchestrator actor, provider API clients, and the fixture catalog live there. Verify with `cd FloradexKit && swift test` (runs on macOS, no simulator). Boundary rule: needs SwiftUI or live hardware → `plantlife/`; otherwise → the Kit.
 
-1. On-device Core ML via `ClassifierService` (Vision + optionally bundled `PlantClassifier.mlmodelc`; returns confidence 0 if the model isn't bundled).
-2. If local confidence < 0.75 → PlantNet API.
-3. If still < 0.6 → GPT-4o vision.
-4. Multiple results → `EnsembleService.vote()` (majority vote, ties broken by average confidence).
+**Hero loop** (`plantlife/Features/`): `CaptureHomeView` (Identify tab) → `CameraSession` actor (pre-warm, responsive capture) → `CaptureFlowModel` (`@Observable`, executes effects only; all sequencing lives in the Kit's `IdentificationFlowReducer`) → `IdentificationOrchestrator` actor drives the data-driven `EscalationPolicy` over providers (Kindwise, Pl@ntNet, OpenAI vision reasoner) → staged `RevealCard` with undo window → commit assigns the dex number (monotonic, never reused; deletes leave gaps). `FLORADEX_FIXTURES=1` + `FLORADEX_AUTORUN=1` run the whole loop on a simulator with canned providers and no keys.
 
-The winner then drives: species details fetch (SwiftData cache in `SpeciesRepository` keyed by `latinName`, miss → `GPT4oService.fetchPlantDetails`) → tag generation (`TagGenerator`) → `DexRepository.addEntry` (ids auto-increment as Floradex numbers) → detached background task generating a pixel-art sprite via `SpriteService` (OpenAI `gpt-image-1`), which updates the entry's `sprite` or sets `spriteGenerationFailed`. Image-hash dedup prevents reprocessing the same photo.
+**Credentials**: all provider calls resolve keys through `CredentialBroker` at request time (env vars `KINDWISE_API_KEY`, `PLANTNET_API_KEY`, `OPENAI_API_KEY` in development; a Cloudflare Workers + App Attest proxy broker replaces it before release). Missing keys throw typed `.credentialMissing` errors; there are no silent no-ops and no keys in the binary.
 
-**Models**: `DexEntry` and `SpeciesDetails` are linked only by the `latinName` string — there is no SwiftData relationship between them.
+**Legacy surfaces still standing** (die in phase 5 remainder): `FloradexCollectionView`/`DexGrid`/`DexCard`, entry-only `PlantDetailsView`, `LiquidTabBar` root, v1 `@Model` classes (`DexEntry`, `SpeciesDetails`, joined by `latinName` string), `@MainActor` repositories in `DataHandling/`. The v2 schema (real relationship, persisted number ledger, media on disk) is specced but not yet built.
 
-**Networking** (`plantlife/Networking/`): each provider (PlantNet, GPT-4o, Sprite, Trefle, Perenual, USDA, Wikipedia) defines an enum conforming to the `APIEndpoint` protocol (`APIClient.swift`) and calls through the shared `APIClient`. Endpoints can override `timeout` (sprite generation uses 300s). Add new providers by following this pattern.
+**Tests**: Kit logic in Swift Testing (94 tests, `swift test`); app unit tests in XCTest on simulator (`-only-testing:plantlifeTests`, use `-parallel-testing-enabled NO`). The 15-case fixture corpus in `FloradexKitFixtures` replays through the real escalation engine and orchestrator.
 
-**Concurrency conventions**: repositories and `ClassificationViewModel` are `@MainActor`; all SwiftData operations must stay on the main actor. Services are `Sendable` singletons (`.shared`). Sprite generation is the one detached background task, and it hops back to `MainActor` for repository writes.
+## Rewrite status and rules
 
-**Tests** (`plantlifeTests/`): XCTest with in-memory `ModelConfiguration(isStoredInMemoryOnly: true)` containers — see `DexRepositoryTests.swift` for the pattern. UI is exercised through state/model logic, not view hierarchy.
-
-## Rewrite (in progress)
-
-A first-principles rewrite is underway on branch `rewrite/foundation`. Read `docs/rewrite-research/floradex-rewrite-spec.md` before any structural change — it defines the architecture (FloradexKit package + thin app layer), the 8-phase plan, and what is deliberately deferred. `docs/rewrite-research/floradex-modern-ios-research.md` holds the platform decisions with sources.
-
-- `FloradexKit/` is a standalone local Swift package (domain logic, Swift 6 mode, no SwiftUI/UIKit). Verify with `cd FloradexKit && swift test` — runs on macOS, no simulator needed. It is not yet wired into the app target (that is a scheduled Xcode session, spec phase 3).
-- Boundary rule: needs SwiftUI or live hardware → `plantlife/`; otherwise → the Kit.
-- Known baseline: the app target does not compile at `bad4257` (one error in `AnimatedConfidenceMeter.swift:7`, `ClassifierService.Source` should be `ClassifierResult.Source`); the test target has additional stale-API errors. Both are scheduled for spec phase 2, not ad-hoc fixes.
+- Done: phase 2 (dead code wave 1, test repair, iOS 26 crash fixes), phase 3 (project wiring, deployment target 26.0, strict-concurrency warnings), phase 4 (Kit orchestrator + provider clients + hero loop UI, old pipeline deleted in wave 2).
+- Next: phase 5 remainder (SwiftData v2 schema + migration test, new dex grid/detail surfaces, native TabView root), phase 6 (trust states, `SWIFT_VERSION` 6 flip), phase 7 (fixture assets, Maestro/XCUITest), phase 8 (polish, proxy scaffold in `proxy/`).
+- Never hand-edit `project.pbxproj`; use `scripts/wire_floradexkit.rb` as the pattern (xcodeproj gem, checkpoint commit, line-by-line diff review, green build) for any further project mutations.
+- Warning budget: 102 at last build (`docs/rewrite-research/warning-baseline.md` started at 140); the count must only shrink, and new code merges with zero warnings.
 - Path note: `/Users/samaydhawan/floradex` is a symlink to this checkout, not a separate worktree.
